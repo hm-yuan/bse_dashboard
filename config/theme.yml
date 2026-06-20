@@ -1,0 +1,20 @@
+colors:
+  primary: "#005BAC"
+  navy: "#0B2A5B"
+  tech_blue: "#1D6FEA"
+  cyan: "#00A6C8"
+  success: "#228B5C"
+  warning: "#D97706"
+  danger: "#E3232E"
+  muted: "#64748B"
+background:
+  page: "#F3F6FA"
+  card: "#FFFFFF"
+  soft: "#EEF4FF"
+border:
+  subtle: "#DDE7F3"
+radius:
+  card: "12px"
+shadow:
+  card: "0 4px 14px rgba(15, 23, 42, 0.06)"
+font_family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif"

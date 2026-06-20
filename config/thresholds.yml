@@ -1,0 +1,16 @@
+liquidity:
+  low_turnover_rate: 0.2
+  low_average_daily_turnover_million: 5
+valuation:
+  high_pe: 60
+  low_growth: 0
+financial:
+  continuous_loss_years: 2
+  negative_operating_cashflow_years: 2
+risk_levels:
+  low:
+    color: "#22A06B"
+  medium:
+    color: "#F59E0B"
+  high:
+    color: "#D92D20"

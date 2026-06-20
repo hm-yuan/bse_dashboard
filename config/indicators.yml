@@ -1,0 +1,35 @@
+home:
+  - listed_companies
+  - total_market_value
+  - average_daily_turnover
+  - median_pe
+  - profitable_company_ratio
+  - risk_company_count
+market_position:
+  - listed_companies
+  - total_market_value
+  - free_float_market_value
+  - average_daily_turnover
+  - median_pe
+  - top_10_market_value_ratio
+company_profile:
+  - median_revenue
+  - median_net_profit
+  - profitable_company_ratio
+  - median_roe
+  - median_rd_expense_ratio
+  - fundraising_use_ratio
+market_development:
+  - new_listings_ytd
+  - companies_under_review
+  - ipo_financing_amount
+  - refinancing_amount
+  - annual_turnover
+  - active_company_count
+market_quality:
+  - low_liquidity_ratio
+  - high_valuation_low_growth_count
+  - continuous_loss_count
+  - regulatory_measure_count
+  - abnormal_fundraising_use_count
+  - delisting_risk_count
