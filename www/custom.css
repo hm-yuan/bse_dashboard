@@ -35,7 +35,20 @@ body {
 }
 
 .navbar .container-fluid {
+  align-items: center;
   gap: 40px;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
 }
 
 .app-brand-logo {
@@ -60,13 +73,7 @@ body {
 }
 
 .navbar .nav-link.active::after {
-  position: absolute;
-  right: 16px;
-  bottom: 0;
-  left: 16px;
-  height: 3px;
-  background: var(--bse-blue);
-  content: "";
+  display: none;
 }
 
 .page-shell,
@@ -74,50 +81,6 @@ body {
   max-width: 1600px;
   margin: 0 auto;
   padding: 24px 32px 36px;
-}
-
-.page-header {
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.page-kicker {
-  margin-bottom: 6px;
-  color: var(--bse-blue);
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.03em;
-}
-
-.page-title-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.page-header h1 {
-  margin: 0;
-  color: var(--text-strong);
-  font-size: 30px;
-  font-weight: 750;
-  letter-spacing: -0.02em;
-}
-
-.page-meta {
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.page-subtitle {
-  max-width: 960px;
-  margin: 8px 0 0;
-  color: #52657A;
-  font-size: 14px;
-  line-height: 1.55;
 }
 
 .hero-card,

@@ -8,15 +8,6 @@ dashboard_grid <- function(..., class = NULL) {
   div(class = paste(c("dashboard-grid", class), collapse = " "), ...)
 }
 
-page_header <- function(title, subtitle = NULL, section = NULL, meta = "演示数据") {
-  div(
-    class = "page-header",
-    div(class = "page-kicker", section),
-    div(class = "page-title-row", h1(title), span(class = "page-meta", meta)),
-    if (!is.null(subtitle)) p(class = "page-subtitle", subtitle)
-  )
-}
-
 hero_card <- function(text, label = "核心判断") {
   div(class = "hero-card", div(class = "hero-label", label), div(class = "hero-text", text))
 }
@@ -117,7 +108,6 @@ page_model_ui <- function(page_id) {
   if (is.null(model)) return(div(class = "page-shell", "页面模型未加载。"))
 
   common <- list(
-    page_header(model$title, model$subtitle, model$section, if (identical(model$mode, "semantic")) "数据模式：semantic" else "数据模式：演示占位"),
     hero_card(model$judgment),
     kpi_grid(model$kpis)
   )
