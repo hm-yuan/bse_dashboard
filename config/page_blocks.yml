@@ -1,0 +1,83 @@
+pages:
+  home:
+    section: "00  全景总览"
+    title: "交易所画像总览"
+    subtitle: "从市场定位、公司结构、发展动能到质量风险，形成一页式观察入口。"
+    judgment: "以统一的展示框架组织市场、公司、发展与质量信号，当前内容为结构化演示数据。"
+    layout: "overview"
+    kpis:
+      - { label: "上市公司数量", unit: "家", min: 180, max: 360, digits: 0 }
+      - { label: "总市值", unit: "亿元", min: 2800, max: 6200, digits: 0 }
+      - { label: "日均成交额", unit: "亿元", min: 80, max: 260, digits: 1 }
+      - { label: "PE 中位数", unit: "倍", min: 18, max: 42, digits: 1 }
+      - { label: "盈利公司占比", unit: "%", min: 64, max: 86, digits: 1 }
+      - { label: "重点关注公司", unit: "家", min: 8, max: 36, digits: 0 }
+    table: { title: "画像导航摘要", type: "overview", note: "演示数据，待接入业务口径" }
+  market_position:
+    section: "01  市场定位画像"
+    title: "市场定位画像"
+    subtitle: "以规模、活跃度、估值和产业结构识别本所在多层次资本市场中的位置。"
+    judgment: "本所呈现中小市值、成长型企业聚集的市场特征，市场定位需结合体量、活跃度和产业结构综合观察。"
+    layout: "comparison"
+    kpis:
+      - { label: "上市公司数量", unit: "家", min: 180, max: 360, digits: 0 }
+      - { label: "总市值", unit: "万亿元", min: 2.0, max: 4.5, digits: 2 }
+      - { label: "流通市值", unit: "万亿元", min: 1.2, max: 3.2, digits: 2 }
+      - { label: "日均成交额", unit: "亿元", min: 80, max: 220, digits: 1 }
+      - { label: "市盈率中位数", unit: "倍", min: 18, max: 42, digits: 1 }
+      - { label: "前十大公司市值占比", unit: "%", min: 12, max: 28, digits: 1 }
+    charts:
+      - { id: "market_bubble", type: "market_bubble", title: "多市场定位对比", note: "横轴：总市值；纵轴：日均成交额；气泡大小：上市公司数量", span: "wide" }
+      - { id: "industry_treemap", type: "industry_treemap", title: "本所上市公司行业市值结构", note: "行业矩形面积代表市值贡献", span: "side" }
+    table: { title: "市场定位明细", type: "market_position", note: "演示数据，待接入业务口径" }
+  company_profile:
+    section: "02  上市公司画像"
+    title: "上市公司画像"
+    subtitle: "从行业结构、经营贡献、成长性与盈利能力，识别本所服务企业的群体特征。"
+    judgment: "上市公司以先进制造与创新型企业为主，经营贡献、成长性和盈利能力存在结构性差异。"
+    layout: "equal"
+    kpis:
+      - { label: "营业收入中位数", unit: "亿元", min: 4.0, max: 12.0, digits: 2 }
+      - { label: "净利润中位数", unit: "亿元", min: 0.3, max: 1.2, digits: 2 }
+      - { label: "盈利公司占比", unit: "%", min: 62, max: 88, digits: 1 }
+      - { label: "ROE 中位数", unit: "%", min: 6, max: 16, digits: 1 }
+      - { label: "研发费用率中位数", unit: "%", min: 3, max: 10, digits: 1 }
+      - { label: "募集资金使用比例", unit: "%", min: 56, max: 86, digits: 1 }
+    charts:
+      - { id: "company_heatmap", type: "company_heatmap", title: "行业结构与经营贡献矩阵", note: "行业在公司数、市值、营收、净利润和研发方面的相对贡献", span: "equal" }
+      - { id: "company_quadrant", type: "company_quadrant", title: "成长性 × 盈利能力四象限", note: "横轴：营收增速；纵轴：ROE；气泡大小：市值", span: "equal" }
+    table: { title: "上市公司结构明细", type: "company_profile", note: "演示数据，待接入业务口径" }
+  market_development:
+    section: "03  市场发展画像"
+    title: "市场发展画像"
+    subtitle: "沿上市、融资、交易和生态四条主线，观察市场功能的阶段性增强。"
+    judgment: "上市、融资与交易生态呈现阶段性演进特征，需用时间序列观察市场功能的持续增强。"
+    layout: "equal"
+    kpis:
+      - { label: "本年新增上市公司", unit: "家", min: 80, max: 260, digits: 0 }
+      - { label: "在审企业数量", unit: "家", min: 180, max: 620, digits: 0 }
+      - { label: "IPO 融资额", unit: "亿元", min: 120, max: 520, digits: 1 }
+      - { label: "再融资额", unit: "亿元", min: 280, max: 980, digits: 1 }
+      - { label: "年度成交金额", unit: "万亿元", min: 0.8, max: 3.6, digits: 2 }
+      - { label: "活跃公司数量", unit: "家", min: 520, max: 1800, digits: 0 }
+    charts:
+      - { id: "listing_financing", type: "listing_financing", title: "上市与融资发展趋势", note: "柱形：新增上市；折线：IPO 与再融资金额", span: "equal" }
+      - { id: "trading_ecosystem", type: "trading_ecosystem", title: "交易活跃与市场生态趋势", note: "柱形：日均成交额；折线：活跃公司与产品生态", span: "equal" }
+    table: { title: "市场发展明细", type: "market_development", note: "演示数据，待接入业务口径" }
+  market_quality:
+    section: "04  市场质量画像"
+    title: "市场质量画像"
+    subtitle: "以流动性、估值、财务、合规和退市风险构建持续监测与重点追踪界面。"
+    judgment: "市场质量总体保持稳定，重点观察流动性、成长质量与风险类型在行业中的集中分布。"
+    layout: "comparison"
+    kpis:
+      - { label: "低流动性公司占比", unit: "%", min: 8, max: 24, digits: 1 }
+      - { label: "高估值低增长公司", unit: "家", min: 60, max: 260, digits: 0 }
+      - { label: "连续亏损公司", unit: "家", min: 20, max: 140, digits: 0 }
+      - { label: "监管措施数量", unit: "件", min: 12, max: 80, digits: 0 }
+      - { label: "募投异常公司", unit: "家", min: 18, max: 120, digits: 0 }
+      - { label: "退市风险公司", unit: "家", min: 4, max: 46, digits: 0 }
+    charts:
+      - { id: "quality_matrix", type: "quality_matrix", title: "市场质量状态矩阵", note: "横轴：流动性；纵轴：基本面质量；颜色：风险状态", span: "wide" }
+      - { id: "risk_heatmap", type: "risk_heatmap", title: "风险类型—行业热力图", note: "颜色越深代表该风险类型在行业中的集中程度越高", span: "side" }
+    table: { title: "重点风险对象明细", type: "market_quality", note: "演示数据，待接入业务口径" }

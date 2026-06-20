@@ -225,10 +225,6 @@ load_dashboard_data <- function(use_processed = TRUE,
                                 processed_dir = "data/processed",
                                 use_demo = FALSE) {
   sample_data <- load_demo_data()
-  dashboard <- sample_data
-  dashboard$sample_data <- sample_data
-  dashboard$demo_data <- sample_data
-
   standard_tables <- c(
     "dim_company",
     "dim_industry",
@@ -241,32 +237,39 @@ load_dashboard_data <- function(use_processed = TRUE,
     "fact_listing_pipeline"
   )
 
-  attach_empty_standard_tables <- function(x) {
+  standard <- stats::setNames(vector("list", length(standard_tables)), standard_tables)
+  auxiliary <- list(
+    market_position_kpi = data.frame(),
+    market_position_company_detail = data.frame(),
+    data_quality_log = empty_data_quality_log()
+  )
+  source_name <- "sample_data"
+
+  if (isTRUE(use_processed) && !isTRUE(use_demo)) {
     for (table_name in standard_tables) {
-      x[[table_name]] <- data.frame()
+      table <- load_processed_table(table_name, processed_dir = processed_dir)
+      standard[[table_name]] <- if (is.null(table)) data.frame() else table
     }
-    x
+
+    for (table_name in names(auxiliary)) {
+      table <- load_processed_table(table_name, processed_dir = processed_dir)
+      if (!is.null(table)) auxiliary[[table_name]] <- table
+    }
+
+    if (nrow(auxiliary$market_position_kpi) > 0L && nrow(auxiliary$market_position_company_detail) > 0L) {
+      source_name <- "processed"
+    }
   }
 
-  if (!isTRUE(use_processed) || isTRUE(use_demo)) {
-    dashboard$market_position_kpi <- data.frame()
-    dashboard$market_position_company_detail <- data.frame()
-    dashboard$data_quality_log <- empty_data_quality_log()
-    dashboard$data_source <- list(market_position = "sample_data")
-    return(attach_empty_standard_tables(dashboard))
-  }
+  # Keep the historical sample payload only as a compatibility fallback for
+  # semantic calculations while page modules consume dashboard_page_models.
+  dashboard <- sample_data
+  dashboard$sample_data <- sample_data
+  dashboard$demo_data <- sample_data
+  dashboard$standard <- standard
+  dashboard$data_source <- list(standard = source_name)
 
-  market_position <- load_market_position_data(processed_dir = processed_dir, sample_data = sample_data)
-  dashboard$market_position <- market_position$page
-  dashboard$market_position_kpi <- market_position$market_position_kpi
-  dashboard$market_position_company_detail <- market_position$market_position_company_detail
-  dashboard$data_quality_log <- market_position$data_quality_log
-  dashboard$data_source <- list(market_position = market_position$source)
-
-  for (table_name in standard_tables) {
-    table <- load_processed_table(table_name, processed_dir = processed_dir)
-    dashboard[[table_name]] <- if (is.null(table)) data.frame() else table
-  }
-
+  for (table_name in standard_tables) dashboard[[table_name]] <- standard[[table_name]]
+  for (table_name in names(auxiliary)) dashboard[[table_name]] <- auxiliary[[table_name]]
   dashboard
 }

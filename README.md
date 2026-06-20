@@ -8,6 +8,7 @@
 - bslib
 - htmltools（随 Shiny 使用）
 - highcharter（主图交互图表；缺失时图表函数会回退为简化表格或说明区）
+- yaml（页面内容块配置）
 
 ## 视觉风格
 
@@ -48,7 +49,7 @@ bse_dashboard/
 在 R 控制台中执行：
 
 ```r
-install.packages(c("shiny", "bslib", "highcharter"))
+install.packages(c("shiny", "bslib", "highcharter", "yaml"))
 ```
 
 ## 运行应用
@@ -102,3 +103,16 @@ generate_demo_processed_data()
   - `data/processed/data_quality_log.csv`
 - 后续画像页面所需的标准演示表也保存在 `data/processed/`，由 `R/data_prepare.R` 生成。
 - 如果关键 processed 文件缺失或读取失败，`load_dashboard_data()` 会给出 warning，并回退到 `R/sample_data.R` 的演示数据，保证应用仍可启动。
+
+## 展示模式
+
+默认运行 `placeholder` 展示模式：页面结构、KPI、表格和 Highcharter 图形均为可复现的演示内容，不代表真实业务数据。页面要素由 `config/page_blocks.yml` 统一配置，后续可逐项替换为正式指标和口径。
+
+如需切换到 semantic 数据模式，请在启动前设置环境变量：
+
+```r
+Sys.setenv(BSE_PRESENTATION_MODE = "semantic")
+shiny::runApp()
+```
+
+semantic 模式通过统一的中间层读取 processed 标准表；页面模块本身不直接读取事实表或计算指标。
