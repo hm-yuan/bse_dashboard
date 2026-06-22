@@ -16,12 +16,14 @@ ui <- page_navbar(
   id = "main_nav",
   theme = app_theme,
   header = tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
+    tags$script(src = "force_chart_width.js"),
+    tags$script(src = "kpi_flip.js")
   ),
   nav_panel("首页总览", homeUI("home")),
-  nav_panel("市场定位画像", marketPositionUI("market_position")),
-  nav_panel("上市公司画像", companyProfileUI("company_profile")),
-  nav_panel("市场发展画像", marketDevelopmentUI("market_development")),
+  nav_panel("市场定位", marketPositionUI("market_position")),
+  nav_panel("公司画像", companyProfileUI("company_profile")),
+  nav_panel("市场生态", marketDevelopmentUI("market_development")),
   nav_panel("市场质量画像", marketQualityUI("market_quality"))
 )
 

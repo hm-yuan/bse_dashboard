@@ -70,9 +70,9 @@ bse_dashboard/
 │  ├─ sample_data.R              # 最小可运行模拟数据
 │  ├─ ui_components.R            # 通用 UI 组件，如 KPI、Chart、Insight、Detail、Badge
 │  ├─ mod_home.R                 # 首页总览 Shiny module
-│  ├─ mod_market_position.R      # 市场定位画像 Shiny module
-│  ├─ mod_company_profile.R      # 上市公司画像 Shiny module
-│  ├─ mod_market_development.R   # 市场发展画像 Shiny module
+│  ├─ mod_market_position.R      # 市场定位 Shiny module
+│  ├─ mod_company_profile.R      # 公司画像 Shiny module
+│  ├─ mod_market_development.R   # 市场生态 Shiny module
 │  └─ mod_market_quality.R       # 市场质量画像 Shiny module
 ├─ data/
 │  ├─ raw/                       # 原始真实数据落地区，保持只读和可追溯
@@ -179,9 +179,9 @@ data/processed/data_manifest.yml
 Dashboard 包含五个页面：
 
 1. 首页总览
-2. 市场定位画像
-3. 上市公司画像
-4. 市场发展画像
+2. 市场定位
+3. 公司画像
+4. 市场生态
 5. 市场质量画像
 
 每个画像页面采用：
@@ -196,7 +196,7 @@ Dashboard 包含五个页面：
 
 ## 四个画像页面主图
 
-### 市场定位画像
+### 市场定位
 
 核心问题：本交易所在资本市场中处于什么位置？
 
@@ -205,7 +205,7 @@ Dashboard 包含五个页面：
 * 多市场定位气泡图
 * 本所行业市值结构图
 
-### 上市公司画像
+### 公司画像
 
 核心问题：本交易所上市公司是什么样的企业？
 
@@ -214,7 +214,7 @@ Dashboard 包含五个页面：
 * 行业结构与经营贡献矩阵
 * 成长性 × 盈利能力四象限图
 
-### 市场发展画像
+### 市场生态
 
 核心问题：本交易所的业务功能是否在持续增强？
 

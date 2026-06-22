@@ -13,27 +13,39 @@ demo_processed_table_names <- c(
   "fact_listing_pipeline"
 )
 
+# 用途：以 UTF-8 编码将数据框写入 CSV 文件
+# 输入来源：函数输入参数
 demo_write_csv_utf8 <- function(df, path) {
   utils::write.csv(df, path, row.names = FALSE, na = "", fileEncoding = "UTF-8")
 }
 
+# 用途：以 UTF-8 编码读取 CSV 文件
+# 输入来源：data/processed/*.csv
 demo_read_csv_utf8 <- function(path) {
   utils::read.csv(path, stringsAsFactors = FALSE, fileEncoding = "UTF-8", check.names = FALSE)
 }
 
+# 用途：将输入安全转换为数值型向量
+# 输入来源：函数输入参数
 demo_num <- function(x) {
   suppressWarnings(as.numeric(x))
 }
 
+# 用途：将输入安全转换为日期型向量
+# 输入来源：函数输入参数
 demo_date <- function(x) {
   out <- suppressWarnings(as.Date(x))
   out
 }
 
+# 用途：将数值限制在指定上下界之间
+# 输入来源：函数输入参数
 demo_clamp <- function(x, lower, upper) {
   pmin(pmax(x, lower), upper)
 }
 
+# 用途：用有效值的中位数填充数值向量中的无效值
+# 输入来源：函数输入参数
 demo_fill_numeric <- function(x, default = 1) {
   x <- demo_num(x)
   ok <- is.finite(x)
@@ -42,10 +54,14 @@ demo_fill_numeric <- function(x, default = 1) {
   x
 }
 
+# 用途：将向量循环截取到指定长度
+# 输入来源：函数输入参数
 demo_pick <- function(x, n) {
   rep(x, length.out = n)
 }
 
+# 用途：根据行业名称映射到七大产业分组
+# 输入来源：函数输入参数（公司行业字段）
 demo_industry_group <- function(industry) {
   x <- as.character(industry)
   ifelse(grepl("软件|信息|计算机|通信|电子|互联网|数据", x),
@@ -69,6 +85,8 @@ demo_industry_group <- function(industry) {
   )
 }
 
+# 用途：将产业分组映射为战略赛道标签
+# 输入来源：函数输入参数（产业分组）
 demo_strategic_sector <- function(industry_group) {
   ifelse(industry_group == "信息技术", "数字经济",
     ifelse(industry_group == "先进制造", "高端制造",
@@ -81,6 +99,8 @@ demo_strategic_sector <- function(industry_group) {
   )
 }
 
+# 用途：当无 processed 公司明细时生成演示用公司清单
+# 输入来源：R/sample_data.R
 demo_fallback_company_detail <- function(n = 36) {
   if (!exists("load_demo_data", mode = "function") && file.exists("R/sample_data.R")) {
     source("R/sample_data.R", encoding = "UTF-8")
@@ -114,6 +134,8 @@ demo_fallback_company_detail <- function(n = 36) {
   )
 }
 
+# 用途：加载公司基础清单作为演示数据生成的骨架
+# 输入来源：data/processed/market_position_company_detail.csv、R/sample_data.R
 demo_load_company_spine <- function(processed_dir) {
   path <- file.path(processed_dir, "market_position_company_detail.csv")
   if (file.exists(path)) {
@@ -124,7 +146,7 @@ demo_load_company_spine <- function(processed_dir) {
     source <- "R/sample_data.R fallback"
   }
 
-  required <- c("company_code", "company_name", "board", "listing_date", "industry", "total_market_cap_yi", "float_market_cap_yi", "pe")
+  required <- c("company_code", "company_name", "board", "listing_date", "industry", "city", "total_market_cap_yi", "float_market_cap_yi", "pe")
   for (col in required) {
     if (!col %in% names(df)) {
       df[[col]] <- NA
@@ -137,6 +159,8 @@ demo_load_company_spine <- function(processed_dir) {
   df
 }
 
+# 用途：基于公司清单构建 dim_company 标准维表
+# 输入来源：data/processed/market_position_company_detail.csv、R/sample_data.R
 demo_build_dim_company <- function(company_detail) {
   n <- nrow(company_detail)
   province_city <- data.frame(
@@ -151,13 +175,17 @@ demo_build_dim_company <- function(company_detail) {
   cap <- demo_fill_numeric(company_detail$total_market_cap_yi, 20)
   specialized_prob <- demo_clamp(0.38 + 0.22 * is_high_tech + 0.12 * (cap < stats::median(cap)), 0.15, 0.82)
 
+  source_city <- trimws(as.character(company_detail$city))
+  valid_city <- !is.na(source_city) & nzchar(source_city) & !grepl("^=", source_city)
+  fallback_index <- ((seq_len(n) - 1L) %% nrow(province_city)) + 1L
+
   data.frame(
     company_code = company_detail$company_code,
     company_name = company_detail$company_name,
     board = company_detail$board,
     listing_date = company_detail$listing_date,
-    province = province_city$province[((seq_len(n) - 1L) %% nrow(province_city)) + 1L],
-    city = province_city$city[((seq_len(n) - 1L) %% nrow(province_city)) + 1L],
+    province = province_city$province[fallback_index],
+    city = ifelse(valid_city, source_city, province_city$city[fallback_index]),
     industry = company_detail$industry,
     strategic_sector = strategic_sector,
     is_bse = TRUE,
@@ -167,6 +195,8 @@ demo_build_dim_company <- function(company_detail) {
   )
 }
 
+# 用途：基于 dim_company 构建行业维表
+# 输入来源：函数输入参数（由 demo_build_dim_company 生成）
 demo_build_dim_industry <- function(dim_company) {
   industry <- unique(dim_company$industry)
   industry_group <- demo_industry_group(industry)
@@ -181,6 +211,8 @@ demo_build_dim_industry <- function(dim_company) {
   )
 }
 
+# 用途：基于公司维表和公司明细生成演示用公司指标
+# 输入来源：函数输入参数（由 demo_build_dim_company 生成）
 demo_company_metrics <- function(dim_company, company_detail) {
   n <- nrow(dim_company)
   cap <- demo_fill_numeric(company_detail$total_market_cap_yi, 20)
@@ -231,6 +263,8 @@ demo_company_metrics <- function(dim_company, company_detail) {
   )
 }
 
+# 用途：基于公司指标构造演示用财务周期事实表
+# 输入来源：函数输入参数（由 demo_build_dim_company、demo_company_metrics 生成）
 demo_build_financial_period <- function(dim_company, metrics, periods) {
   rows <- vector("list", nrow(dim_company) * length(periods))
   k <- 1L
@@ -270,6 +304,8 @@ demo_build_financial_period <- function(dim_company, metrics, periods) {
   do.call(rbind, rows)
 }
 
+# 用途：基于财务周期数据构造演示用市场周期事实表
+# 输入来源：函数输入参数（由 demo_build_financial_period 等生成）
 demo_build_market_period <- function(dim_company, metrics, financial_period, periods) {
   rows <- vector("list", nrow(dim_company) * length(periods))
   k <- 1L
@@ -313,6 +349,8 @@ demo_build_market_period <- function(dim_company, metrics, financial_period, per
   do.call(rbind, rows)
 }
 
+# 用途：基于公司指标构造演示用融资事件表
+# 输入来源：函数输入参数（由 demo_build_dim_company、demo_company_metrics 生成）
 demo_build_financing <- function(dim_company, metrics) {
   rows <- list()
   k <- 1L
@@ -360,6 +398,8 @@ demo_build_financing <- function(dim_company, metrics) {
   do.call(rbind, rows)
 }
 
+# 用途：基于融资事件表构造演示用募资使用表
+# 输入来源：函数输入参数（由 demo_build_financing 生成）
 demo_build_fundraising_use <- function(dim_company, financing) {
   raised <- stats::aggregate(amount_yi ~ company_code, financing, sum)
   rows <- vector("list", nrow(raised))
@@ -397,6 +437,8 @@ demo_build_fundraising_use <- function(dim_company, financing) {
   do.call(rbind, rows)
 }
 
+# 用途：提取周期表中最新的两个周期数据进行合并
+# 输入来源：函数输入参数（由 demo_build_financial_period 生成）
 demo_latest_pair <- function(df, latest_period, previous_period) {
   latest <- df[df$period == latest_period, , drop = FALSE]
   previous <- df[df$period == previous_period, , drop = FALSE]
@@ -404,6 +446,8 @@ demo_latest_pair <- function(df, latest_period, previous_period) {
   merge(latest, previous, by.x = "company_code", by.y = "company_code_previous", all.x = TRUE)
 }
 
+# 用途：基于市场、财务和募资数据构造演示用风险标签表
+# 输入来源：函数输入参数（由 demo_build_market_period、demo_build_financial_period、demo_build_fundraising_use 生成）
 demo_build_risk_tag <- function(dim_company, market_period, financial_period, fundraising_use) {
   latest_market <- market_period[market_period$period == "2026-06", , drop = FALSE]
   latest_fin <- demo_latest_pair(financial_period, "2026-06", "2025-12")
@@ -481,6 +525,8 @@ demo_build_risk_tag <- function(dim_company, market_period, financial_period, fu
   do.call(rbind, rows)
 }
 
+# 用途：基于风险标签构造演示用监管事件表
+# 输入来源：函数输入参数（由 demo_build_risk_tag、demo_build_dim_company 生成）
 demo_build_supervision <- function(risk_tag, dim_company) {
   risk_companies <- unique(risk_tag$company_code)
   sample_n <- min(length(risk_companies), max(12L, round(nrow(dim_company) * 0.08)))
@@ -506,6 +552,8 @@ demo_build_supervision <- function(risk_tag, dim_company) {
   do.call(rbind, rows)
 }
 
+# 用途：根据监管事件为风险标签补充合规风险记录
+# 输入来源：函数输入参数（由 demo_build_risk_tag、demo_build_supervision 生成）
 demo_add_compliance_risk <- function(risk_tag, supervision) {
   if (nrow(supervision) == 0L) return(risk_tag)
   severe <- supervision[supervision$severity %in% c("中", "高"), , drop = FALSE]
@@ -523,6 +571,8 @@ demo_add_compliance_risk <- function(risk_tag, supervision) {
   unique(rbind(risk_tag, compliance))
 }
 
+# 用途：基于公司和行业维表构造演示用上市pipeline表
+# 输入来源：函数输入参数（由 demo_build_dim_company、demo_build_dim_industry 生成）
 demo_build_listing_pipeline <- function(dim_company, dim_industry, n = 60) {
   sponsors <- c("中信证券", "中信建投", "国泰君安", "申万宏源", "招商证券", "海通证券", "开源证券", "东吴证券")
   stages <- c("辅导备案", "已受理", "问询回复", "上市委审议", "提交注册")
@@ -541,6 +591,8 @@ demo_build_listing_pipeline <- function(dim_company, dim_industry, n = 60) {
   )
 }
 
+# 用途：为演示生成的各表构造数据质量日志行
+# 输入来源：函数输入参数（generate_demo_processed_data 内部传入）
 demo_quality_rows <- function(table_list, source_note, fallback_used) {
   rows <- lapply(names(table_list), function(name) {
     data.frame(
@@ -570,6 +622,8 @@ demo_quality_rows <- function(table_list, source_note, fallback_used) {
   do.call(rbind, rows)
 }
 
+# 用途：生成演示用 processed 标准表并写入 CSV 文件
+# 输入来源：data/processed/market_position_company_detail.csv、R/sample_data.R
 generate_demo_processed_data <- function(processed_dir = "data/processed", seed = 20260619) {
   set.seed(seed)
   if (!dir.exists(processed_dir)) {

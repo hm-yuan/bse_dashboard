@@ -14,10 +14,10 @@ pages:
       - { label: "重点关注公司", unit: "家", min: 8, max: 36, digits: 0 }
     table: { title: "画像导航摘要", type: "overview", note: "演示数据，待接入业务口径" }
   market_position:
-    section: "01  市场定位画像"
-    title: "市场定位画像"
+    section: "01  市场定位"
+    title: "市场定位"
     subtitle: "以规模、活跃度、估值和产业结构识别本所在多层次资本市场中的位置。"
-    judgment: "本所呈现中小市值、成长型企业聚集的市场特征，市场定位需结合体量、活跃度和产业结构综合观察。"
+    judgment: "服务创新型中小企业"
     layout: "comparison"
     kpis:
       - { label: "上市公司数量", unit: "家", min: 180, max: 360, digits: 0 }
@@ -27,12 +27,12 @@ pages:
       - { label: "市盈率中位数", unit: "倍", min: 18, max: 42, digits: 1 }
       - { label: "前十大公司市值占比", unit: "%", min: 12, max: 28, digits: 1 }
     charts:
-      - { id: "market_bubble", type: "market_bubble", title: "多市场定位对比", note: "横轴：总市值；纵轴：日均成交额；气泡大小：上市公司数量", span: "wide" }
+      - { id: "market_bubble", type: "market_bubble", title: "市场规模情况", note: "横轴：总市值；纵轴：日均成交额；气泡大小：上市公司数量", span: "wide" }
       - { id: "industry_treemap", type: "industry_treemap", title: "本所上市公司行业市值结构", note: "行业矩形面积代表市值贡献", span: "side" }
     table: { title: "市场定位明细", type: "market_position", note: "演示数据，待接入业务口径" }
   company_profile:
-    section: "02  上市公司画像"
-    title: "上市公司画像"
+    section: "02  公司画像"
+    title: "公司画像"
     subtitle: "从行业结构、经营贡献、成长性与盈利能力，识别本所服务企业的群体特征。"
     judgment: "上市公司以先进制造与创新型企业为主，经营贡献、成长性和盈利能力存在结构性差异。"
     layout: "equal"
@@ -44,12 +44,13 @@ pages:
       - { label: "研发费用率中位数", unit: "%", min: 3, max: 10, digits: 1 }
       - { label: "募集资金使用比例", unit: "%", min: 56, max: 86, digits: 1 }
     charts:
+      - { id: "company_geo_map", type: "company_geo_map", title: "上市公司全国地域分布", note: "省级色块：上市公司数量；城市气泡：该城市上市公司数量", span: "equal" }
       - { id: "company_heatmap", type: "company_heatmap", title: "行业结构与经营贡献矩阵", note: "行业在公司数、市值、营收、净利润和研发方面的相对贡献", span: "equal" }
       - { id: "company_quadrant", type: "company_quadrant", title: "成长性 × 盈利能力四象限", note: "横轴：营收增速；纵轴：ROE；气泡大小：市值", span: "equal" }
     table: { title: "上市公司结构明细", type: "company_profile", note: "演示数据，待接入业务口径" }
   market_development:
-    section: "03  市场发展画像"
-    title: "市场发展画像"
+    section: "03  市场生态"
+    title: "市场生态"
     subtitle: "沿上市、融资、交易和生态四条主线，观察市场功能的阶段性增强。"
     judgment: "上市、融资与交易生态呈现阶段性演进特征，需用时间序列观察市场功能的持续增强。"
     layout: "equal"

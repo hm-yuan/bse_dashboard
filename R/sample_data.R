@@ -11,6 +11,8 @@ make_kpis <- function(labels, values, units = rep("", length(labels)),
   )
 }
 
+# 用途：加载首页与四个画像页面的演示数据（判断、KPI、洞察、明细）。
+# 输入来源：无参数，函数内硬编码的演示数据。
 load_demo_data <- function() {
   list(
     home = list(

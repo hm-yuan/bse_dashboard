@@ -1,12 +1,16 @@
+# 用途：读取并校验展示模式环境变量，返回 "placeholder" 或 "semantic"。
+# 输入来源：环境变量 `BSE_PRESENTATION_MODE`。
 dashboard_presentation_mode <- function() {
-  mode <- tolower(trimws(Sys.getenv("BSE_PRESENTATION_MODE", unset = "placeholder")))
-  if (!mode %in% c("placeholder", "semantic")) "placeholder" else mode
+  mode <- tolower(trimws(Sys.getenv("BSE_PRESENTATION_MODE", unset = "semantic")))
+  if (!mode %in% c("placeholder", "semantic")) "semantic" else mode
 }
 
 `%||%` <- function(x, y) {
   if (is.null(x) || length(x) == 0L) y else x
 }
 
+# 用途：加载并解析页面块 YAML 配置文件。
+# 输入来源：`path` 参数（默认 `config/page_blocks.yml`）。
 load_page_blocks <- function(path = "config/page_blocks.yml") {
   if (!requireNamespace("yaml", quietly = TRUE)) {
     stop("缺少 yaml 包。请安装 yaml 后重新启动应用。", call. = FALSE)
@@ -15,6 +19,8 @@ load_page_blocks <- function(path = "config/page_blocks.yml") {
   yaml::read_yaml(path)$pages
 }
 
+# 用途：在固定随机种子下执行代码，并在执行后恢复全局随机状态。
+# 输入来源：`seed` 参数、`code` 参数。
 placeholder_with_seed <- function(seed, code) {
   had_seed <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
   if (had_seed) old_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
@@ -25,10 +31,14 @@ placeholder_with_seed <- function(seed, code) {
   force(code)
 }
 
+# 用途：根据页面 ID 与偏移量生成固定的演示数据随机种子。
+# 输入来源：`page_id` 参数、`offset` 参数。
 placeholder_seed <- function(page_id, offset = 0L) {
   sum(utf8ToInt(page_id)) * 101L + as.integer(offset)
 }
 
+# 用途：根据 KPI 定义列表为指定页面生成演示 KPI 数据框。
+# 输入来源：`page_id` 参数、`definitions` 参数（来自 `config/page_blocks.yml`）。
 placeholder_kpis <- function(page_id, definitions) {
   placeholder_with_seed(placeholder_seed(page_id, 1L), {
     rows <- lapply(seq_along(definitions), function(i) {
@@ -72,6 +82,8 @@ placeholder_summary <- function(page_id) {
   content[[page_id]] %||% character()
 }
 
+# 用途：根据页面 ID 与表格类型生成演示明细数据框。
+# 输入来源：`page_id` 参数、`table_type` 参数（来自 `config/page_blocks.yml`）。
 placeholder_table <- function(page_id, table_type) {
   placeholder_with_seed(placeholder_seed(page_id, 51L), {
     if (identical(table_type, "overview")) {
@@ -95,6 +107,8 @@ placeholder_table <- function(page_id, table_type) {
   })
 }
 
+# 用途：根据页面块配置构建全部页面的占位数据模型。
+# 输入来源：`config` 参数（默认来自 `load_page_blocks()`）。
 build_placeholder_page_models <- function(config = load_page_blocks()) {
   lapply(names(config), function(page_id) {
     definition <- config[[page_id]]

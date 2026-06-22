@@ -2,6 +2,8 @@
 # Input: the list returned by load_dashboard_data().
 # Output: KPI data frames, trend data frames, or insight character vectors.
 
+# 用途：计算市场生态的核心 KPI 卡片数据（新增上市、在审企业、融资额、成交额、活跃公司等）
+# 输入来源：`dashboard_data$dim_company`、`dashboard_data$fact_listing_pipeline`、`dashboard_data$fact_financing`、`dashboard_data$fact_market_period`、`config/thresholds.yml`
 calc_development_kpis <- function(data) {
   dim_company <- metric_table(data, "dim_company")
   pipeline <- metric_table(data, "fact_listing_pipeline")
@@ -55,6 +57,8 @@ calc_development_kpis <- function(data) {
   )
 }
 
+# 用途：按年度统计新增上市公司数、IPO 融资额、再融资额及在审企业数量趋势
+# 输入来源：`dashboard_data$dim_company`、`dashboard_data$fact_financing`、`dashboard_data$fact_listing_pipeline`
 calc_listing_financing_trend <- function(data) {
   dim_company <- metric_table(data, "dim_company")
   financing <- metric_table(data, "fact_financing")
@@ -83,6 +87,8 @@ calc_listing_financing_trend <- function(data) {
   out[order(out$year), , drop = FALSE]
 }
 
+# 用途：按 period 统计成交额、换手率、活跃公司数及生态事件，用于交易生态趋势图
+# 输入来源：`dashboard_data$fact_market_period`、`config/thresholds.yml`
 calc_trading_ecosystem_trend <- function(data) {
   market <- metric_table(data, "fact_market_period")
   thresholds <- metric_thresholds()
@@ -106,6 +112,8 @@ calc_trading_ecosystem_trend <- function(data) {
   out[order(out$period), , drop = FALSE]
 }
 
+# 用途：生成市场生态的文字洞察
+# 输入来源：`calc_development_kpis()`、`calc_listing_financing_trend()` 结果
 calc_development_insights <- function(data) {
   kpis <- calc_development_kpis(data)
   trend <- calc_listing_financing_trend(data)
@@ -118,6 +126,8 @@ calc_development_insights <- function(data) {
   )
 }
 
+# 用途：汇总年度上市融资与交易生态数据，生成市场生态明细表
+# 输入来源：`calc_listing_financing_trend()`、`calc_trading_ecosystem_trend()` 结果
 calc_development_detail <- function(data) {
   listing <- calc_listing_financing_trend(data)
   trading <- calc_trading_ecosystem_trend(data)

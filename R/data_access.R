@@ -1,3 +1,5 @@
+# 用途：将表名映射为 processed 目录下对应的 CSV 文件路径
+# 输入来源：data/processed/*.csv
 processed_table_path <- function(table_name, processed_dir = "data/processed") {
   if (grepl("[/\\\\]", table_name) || grepl("\\.csv$", table_name, ignore.case = TRUE)) {
     return(table_name)
@@ -6,6 +8,8 @@ processed_table_path <- function(table_name, processed_dir = "data/processed") {
   file.path(processed_dir, paste0(table_name, ".csv"))
 }
 
+# 用途：构造空的数据质量日志数据框
+# 输入来源：无，函数内部生成空结构
 empty_data_quality_log <- function() {
   data.frame(
     check_time = character(),
@@ -17,12 +21,16 @@ empty_data_quality_log <- function() {
   )
 }
 
+# 用途：检查指定的 processed 数据表文件是否全部存在
+# 输入来源：data/processed/*.csv
 has_processed_data <- function(table_names = c("market_position_kpi", "market_position_company_detail"),
                                processed_dir = "data/processed") {
   paths <- vapply(table_names, processed_table_path, character(1), processed_dir = processed_dir)
   all(file.exists(paths))
 }
 
+# 用途：读取指定路径的 processed CSV 文件
+# 输入来源：data/processed/*.csv
 read_processed_csv <- function(path) {
   if (!file.exists(path)) {
     stop(sprintf("processed 数据文件不存在：%s", path), call. = FALSE)
@@ -31,6 +39,8 @@ read_processed_csv <- function(path) {
   utils::read.csv(path, stringsAsFactors = FALSE, fileEncoding = "UTF-8", check.names = FALSE)
 }
 
+# 用途：按表名加载 processed 目录下的 CSV 数据表
+# 输入来源：data/processed/*.csv
 load_processed_table <- function(table_name,
                                  processed_dir = "data/processed",
                                  required = FALSE) {
@@ -49,21 +59,29 @@ load_processed_table <- function(table_name,
   )
 }
 
+# 用途：将数值格式化为整数计数展示字符串
+# 输入来源：函数输入参数
 format_count <- function(x) {
   if (length(x) == 0L || is.na(x)) return("--")
   format(round(as.numeric(x), 0), big.mark = ",", scientific = FALSE, trim = TRUE)
 }
 
+# 用途：将数值格式化为指定小数位数的展示字符串
+# 输入来源：函数输入参数
 format_decimal <- function(x, digits = 1) {
   if (length(x) == 0L || is.na(x)) return("--")
   format(round(as.numeric(x), digits), big.mark = ",", scientific = FALSE, trim = TRUE, nsmall = digits)
 }
 
+# 用途：将比例数值格式化为百分比展示字符串
+# 输入来源：函数输入参数
 format_percent <- function(x, digits = 1) {
   if (length(x) == 0L || is.na(x)) return("--")
   format(round(as.numeric(x) * 100, digits), big.mark = ",", scientific = FALSE, trim = TRUE, nsmall = digits)
 }
 
+# 用途：从市场定位 KPI 表中提取页面 KPI 卡片所需指标
+# 输入来源：data/processed/market_position_kpi.csv
 market_position_kpis_from_processed <- function(kpi) {
   row <- kpi[1, , drop = FALSE]
   current_new <- suppressWarnings(as.numeric(row$current_year_new_listed_count[[1]]))
@@ -79,12 +97,12 @@ market_position_kpis_from_processed <- function(kpi) {
   make_kpis(
     labels = c("上市公司", "总市值", "流通市值", "日均成交额", "PE 中位数", "前十市值占比"),
     values = c(
-      format_count(row$listed_company_count[[1]]),
-      format_count(row$total_market_cap_yi[[1]]),
-      format_count(row$float_market_cap_yi[[1]]),
-      format_decimal(row$avg_daily_turnover_yi[[1]], 1),
-      format_decimal(row$pe_median[[1]], 1),
-      format_percent(row$top10_market_cap_share[[1]], 1)
+      row$listed_company_count[[1]],
+      row$total_market_cap_yi[[1]],
+      row$float_market_cap_yi[[1]],
+      row$avg_daily_turnover_yi[[1]],
+      row$pe_median[[1]],
+      row$top10_market_cap_share[[1]]
     ),
     units = c("家", "亿元", "亿元", "亿元", "倍", "%"),
     changes = c(
@@ -106,6 +124,8 @@ market_position_kpis_from_processed <- function(kpi) {
   )
 }
 
+# 用途：从市场定位公司明细表中提取页面展示用的公司明细数据框
+# 输入来源：data/processed/market_position_company_detail.csv
 market_position_details_from_processed <- function(company_detail, max_rows = 12L) {
   if (is.null(company_detail) || nrow(company_detail) == 0L) {
     return(data.frame(
@@ -133,6 +153,8 @@ market_position_details_from_processed <- function(company_detail, max_rows = 12
   )
 }
 
+# 用途：从市场定位 KPI 表生成页面洞察文本
+# 输入来源：data/processed/market_position_kpi.csv
 market_position_insights_from_processed <- function(kpi) {
   row <- kpi[1, , drop = FALSE]
   c(
@@ -145,6 +167,8 @@ market_position_insights_from_processed <- function(kpi) {
   )
 }
 
+# 用途：组合 KPI、洞察、明细和判断，构造市场定位页面数据
+# 输入来源：data/processed/market_position_kpi.csv、data/processed/market_position_company_detail.csv、R/sample_data.R
 build_market_position_page_data <- function(kpi, company_detail, sample_market_position) {
   if (is.null(kpi) || nrow(kpi) == 0L || is.null(company_detail)) {
     return(sample_market_position)
@@ -157,18 +181,26 @@ build_market_position_page_data <- function(kpi, company_detail, sample_market_p
   sample_market_position
 }
 
+# 用途：加载市场定位 KPI 表
+# 输入来源：data/processed/market_position_kpi.csv
 load_market_position_kpi <- function(path = "data/processed/market_position_kpi.csv") {
   read_processed_csv(path)
 }
 
+# 用途：加载市场定位公司明细表
+# 输入来源：data/processed/market_position_company_detail.csv
 load_market_position_company_detail <- function(path = "data/processed/market_position_company_detail.csv") {
   read_processed_csv(path)
 }
 
+# 用途：加载数据质量日志表
+# 输入来源：data/processed/data_quality_log.csv
 load_data_quality_log <- function(path = "data/processed/data_quality_log.csv") {
   read_processed_csv(path)
 }
 
+# 用途：加载市场定位相关 processed 数据，失败时回退到演示数据
+# 输入来源：data/processed/、R/sample_data.R
 load_market_position_data <- function(processed_dir = "data/processed",
                                       sample_data = load_demo_data()) {
   required_tables <- c("market_position_kpi", "market_position_company_detail")
@@ -221,6 +253,8 @@ load_market_position_data <- function(processed_dir = "data/processed",
   )
 }
 
+# 用途：加载 Dashboard 所需的全部标准表和辅助表数据
+# 输入来源：data/processed/、R/sample_data.R
 load_dashboard_data <- function(use_processed = TRUE,
                                 processed_dir = "data/processed",
                                 use_demo = FALSE) {

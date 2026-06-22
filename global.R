@@ -30,7 +30,6 @@ app_theme <- bslib::bs_theme(
   primary = "#005BAC",
   bg = "#F3F6FA",
   fg = "#0B2A5B",
-  "font-family-base" = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif",
   "border-radius" = "12px"
 )
 

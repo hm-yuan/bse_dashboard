@@ -4,10 +4,14 @@
 .basic_data_log <- new.env(parent = emptyenv())
 .basic_data_log$rows <- list()
 
+# 用途：重置全局数据质量日志环境变量
+# 输入来源：无，函数内部清空 .basic_data_log
 reset_data_quality_log <- function() {
   .basic_data_log$rows <- list()
 }
 
+# 用途：向全局数据质量日志中添加一条检查记录
+# 输入来源：函数输入参数
 log_data_quality <- function(source_file, check_item, status, message) {
   .basic_data_log$rows[[length(.basic_data_log$rows) + 1L]] <- data.frame(
     check_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
@@ -19,6 +23,8 @@ log_data_quality <- function(source_file, check_item, status, message) {
   )
 }
 
+# 用途：获取当前累积的数据质量日志数据框
+# 输入来源：.basic_data_log 全局环境
 get_data_quality_log <- function() {
   if (length(.basic_data_log$rows) == 0L) {
     return(data.frame(
@@ -36,6 +42,8 @@ get_data_quality_log <- function() {
 
 invalid_data_tokens <- c("", "#NAME?", "#VALUE!", "#N/A", "N/A", "NA", "--", "-", "NULL", "null")
 
+# 用途：反转义 XML 中的常见特殊字符实体
+# 输入来源：函数输入参数（XML 字符串）
 xml_unescape <- function(x) {
   x <- gsub("&lt;", "<", x, fixed = TRUE)
   x <- gsub("&gt;", ">", x, fixed = TRUE)
@@ -45,6 +53,8 @@ xml_unescape <- function(x) {
   x
 }
 
+# 用途：从 XML 节点字符串中提取指定属性的值
+# 输入来源：函数输入参数（XML 字符串）
 extract_attr <- function(x, attr_name) {
   pattern <- paste0(attr_name, "=\"([^\"]*)\"")
   hit <- regexec(pattern, x, perl = TRUE)
@@ -54,10 +64,14 @@ extract_attr <- function(x, attr_name) {
   }, character(1))
 }
 
+# 用途：从 zip 压缩包中读取指定 XML 成员内容为字符串
+# 输入来源：data/raw/*.xlsx
 read_zip_xml <- function(path, member) {
   paste(readLines(unz(path, member), warn = FALSE, encoding = "UTF-8"), collapse = "")
 }
 
+# 用途：读取 xlsx 文件中的共享字符串表
+# 输入来源：data/raw/*.xlsx
 read_xlsx_shared_strings <- function(path) {
   files <- utils::unzip(path, list = TRUE)$Name
   if (!"xl/sharedStrings.xml" %in% files) {
@@ -80,12 +94,16 @@ read_xlsx_shared_strings <- function(path) {
   }, character(1), USE.NAMES = FALSE)
 }
 
+# 用途：将 Excel 列引用字母转换为列索引
+# 输入来源：函数输入参数（单元格引用字符串）
 col_ref_to_index <- function(ref) {
   letters <- gsub("[0-9]", "", ref)
   chars <- strsplit(letters, "", fixed = TRUE)[[1]]
   as.integer(sum((match(chars, LETTERS)) * (26 ^ rev(seq_along(chars) - 1L))))
 }
 
+# 用途：不依赖外部包读取 xlsx 工作表内容为数据框
+# 输入来源：data/raw/*.xlsx
 read_xlsx_base <- function(path, sheet_member = "xl/worksheets/sheet1.xml") {
   shared_strings <- read_xlsx_shared_strings(path)
   sheet_xml <- read_zip_xml(path, sheet_member)
@@ -159,6 +177,8 @@ read_xlsx_base <- function(path, sheet_member = "xl/worksheets/sheet1.xml") {
   data
 }
 
+# 用途：读取 xlsx 文件，优先使用 readxl/openxlsx 包，否则回退到基础实现
+# 输入来源：data/raw/*.xlsx
 read_xlsx_file <- function(path) {
   if (requireNamespace("readxl", quietly = TRUE)) {
     return(as.data.frame(readxl::read_excel(path, .name_repair = "unique"), stringsAsFactors = FALSE))
@@ -170,6 +190,8 @@ read_xlsx_file <- function(path) {
   read_xlsx_base(path)
 }
 
+# 用途：检测数据框中是否存在 Wind/Excel 异常公式值并记录日志
+# 输入来源：函数输入参数（由 read_xlsx_file 读取的数据框）
 detect_wind_formula_errors <- function(df, source_file) {
   values <- trimws(as.character(unlist(df, use.names = FALSE)))
   bad <- values[values %in% c("#NAME?", "#VALUE!", "#N/A")]
@@ -186,6 +208,8 @@ detect_wind_formula_errors <- function(df, source_file) {
   }
 }
 
+# 用途：读取上市公司基本情况 Excel 文件并记录数据质量日志
+# 输入来源：data/raw/上市公司基本情况.xlsx
 read_basic_company_data <- function(path) {
   if (!file.exists(path)) {
     log_data_quality(path, "file_exists", "error", "输入文件不存在")
@@ -202,6 +226,8 @@ read_basic_company_data <- function(path) {
   df
 }
 
+# 用途：读取市场板块成交统计 Excel 文件并记录数据质量日志
+# 输入来源：data/raw/市场板块成交统计.xlsx
 read_board_trading_data <- function(path) {
   if (!file.exists(path)) {
     log_data_quality(path, "file_exists", "error", "输入文件不存在")
@@ -218,11 +244,15 @@ read_board_trading_data <- function(path) {
   df
 }
 
+# 用途：标准化字段名，去除大小写、空格和特殊符号用于匹配
+# 输入来源：函数输入参数（字段名字符串）
 normalize_field_name <- function(x) {
   x <- tolower(trimws(as.character(x)))
   gsub("[[:space:]_\\-\\.（）()【】\\[\\]：:]+", "", x, perl = TRUE)
 }
 
+# 用途：在数据框中按候选字段名匹配实际字段
+# 输入来源：函数输入参数（由 read_xlsx_file 读取的数据框）
 match_field <- function(df, candidates, source_file, check_item, required = FALSE) {
   nms <- names(df)
   if (length(nms) == 0L) {
@@ -259,11 +289,15 @@ match_field <- function(df, candidates, source_file, check_item, required = FALS
   NA_character_
 }
 
+# 用途：判断向量中的值是否为无效/缺失标记
+# 输入来源：函数输入参数
 is_invalid_value <- function(x) {
   x <- trimws(as.character(x))
   is.na(x) | x %in% invalid_data_tokens
 }
 
+# 用途：从字符串中提取第一个数值
+# 输入来源：函数输入参数
 extract_first_number <- function(x) {
   x <- gsub(",", "", as.character(x), fixed = TRUE)
   hit <- regexpr("[-+]?[0-9]*\\.?[0-9]+", x, perl = TRUE)
@@ -273,6 +307,8 @@ extract_first_number <- function(x) {
   out
 }
 
+# 用途：解析金额字符串并统一换算为亿元单位
+# 输入来源：函数输入参数（Excel 原始字段值）
 parse_money_yi <- function(x, source_file, field_label) {
   raw <- trimws(as.character(x))
   invalid <- is_invalid_value(raw)
@@ -325,6 +361,8 @@ parse_money_yi <- function(x, source_file, field_label) {
   out
 }
 
+# 用途：解析普通数值字符串，支持百分号自动转换为比例
+# 输入来源：函数输入参数（Excel 原始字段值）
 parse_plain_number <- function(x, source_file, field_label) {
   raw <- trimws(as.character(x))
   invalid <- is_invalid_value(raw)
@@ -344,6 +382,8 @@ parse_plain_number <- function(x, source_file, field_label) {
   out
 }
 
+# 用途：安全解析多种格式的日期字符串
+# 输入来源：函数输入参数（Excel 原始字段值）
 parse_date_safe <- function(x) {
   if (inherits(x, "Date")) return(x)
   if (inherits(x, "POSIXt")) return(as.Date(x))
@@ -369,6 +409,8 @@ parse_date_safe <- function(x) {
   out
 }
 
+# 用途：将上市公司基本情况原始字段标准化为统一字段结构
+# 输入来源：data/raw/上市公司基本情况.xlsx
 standardize_company_fields <- function(df) {
   source_file <- attr(df, "source_file", exact = TRUE)
   if (is.null(source_file)) source_file <- "上市公司基本情况.xlsx"
@@ -380,6 +422,7 @@ standardize_company_fields <- function(df) {
       board = character(),
       listing_date = as.Date(character()),
       industry = character(),
+      city = character(),
       total_market_cap_yi = numeric(),
       float_market_cap_yi = numeric(),
       pe = numeric(),
@@ -393,6 +436,10 @@ standardize_company_fields <- function(df) {
   board_col <- match_field(df, c("上市板块", "板块", "市场板块", "交易板块", "所属板块"), source_file, "match_board", TRUE)
   date_col <- match_field(df, c("上市日期", "上市时间", "挂牌日期", "上市日"), source_file, "match_listing_date", FALSE)
   industry_col <- match_field(df, c("行业", "所属行业", "证监会行业", "申万行业", "行业名称"), source_file, "match_industry", FALSE)
+  city_col <- match_field(df, c("城市", "所在城市", "注册城市", "办公城市", "所在地城市"), source_file, "match_city", FALSE)
+  province_col <- match_field(df, c("省份", "省", "所在省份", "注册省份"), source_file, "match_province", FALSE)
+  lon_col <- match_field(df, c("经度", "longitude", "lon", "Longitude", "LON"), source_file, "match_longitude", FALSE)
+  lat_col <- match_field(df, c("纬度", "latitude", "lat", "Latitude", "LAT"), source_file, "match_latitude", FALSE)
   total_cap_col <- match_field(df, c("总市值", "总市值亿元", "总市值(亿元)", "总市值（亿元）", "市值"), source_file, "match_total_market_cap", TRUE)
   float_cap_col <- match_field(df, c("流通市值", "流通市值亿元", "流通市值(亿元)", "流通市值（亿元）"), source_file, "match_float_market_cap", TRUE)
   pe_ttm_col <- match_field(df, c("PE_TTM", "PETTM", "市盈率TTM", "市盈率_TTM", "市盈率 TTM"), source_file, "match_pe_ttm", FALSE)
@@ -419,12 +466,20 @@ standardize_company_fields <- function(df) {
     rep(NA_real_, nrow(df))
   }
 
+  pick_num <- function(col, default = NA_real_) {
+    if (!is.na(col) && col %in% names(df)) chart_safe_number(df[[col]]) else rep(default, nrow(df))
+  }
+
   data.frame(
     company_code = pick(code_col),
     company_name = pick(name_col),
     board = pick(board_col),
     listing_date = if (!is.na(date_col)) parse_date_safe(df[[date_col]]) else as.Date(rep(NA_character_, nrow(df))),
     industry = pick(industry_col),
+    city = pick(city_col),
+    province = pick(province_col),
+    longitude = pick_num(lon_col),
+    latitude = pick_num(lat_col),
     total_market_cap_yi = if (!is.na(total_cap_col)) parse_money_yi(df[[total_cap_col]], source_file, "total_market_cap") else rep(NA_real_, nrow(df)),
     float_market_cap_yi = if (!is.na(float_cap_col)) parse_money_yi(df[[float_cap_col]], source_file, "float_market_cap") else rep(NA_real_, nrow(df)),
     pe = pe_values,
@@ -433,6 +488,8 @@ standardize_company_fields <- function(df) {
   )
 }
 
+# 用途：将市场板块成交统计原始字段标准化为统一字段结构
+# 输入来源：data/raw/市场板块成交统计.xlsx
 standardize_board_trading <- function(df) {
   source_file <- attr(df, "source_file", exact = TRUE)
   if (is.null(source_file)) source_file <- "市场板块成交统计.xlsx"
@@ -521,6 +578,8 @@ standardize_board_trading <- function(df) {
   )
 }
 
+# 用途：从公司表中筛选出北交所上市公司
+# 输入来源：data/raw/上市公司基本情况.xlsx
 filter_bse_companies <- function(df) {
   source_file <- attr(df, "source_file", exact = TRUE)
   if (is.null(source_file)) source_file <- "上市公司基本情况.xlsx"
@@ -543,6 +602,8 @@ filter_bse_companies <- function(df) {
   out
 }
 
+# 用途：基于上市公司和成交统计数据计算市场定位 KPI
+# 输入来源：data/raw/上市公司基本情况.xlsx、data/raw/市场板块成交统计.xlsx
 calc_market_position_kpi <- function(company_df, board_trading_df) {
   if (!all(c("company_code", "total_market_cap_yi", "float_market_cap_yi", "pe") %in% names(company_df))) {
     company_df <- standardize_company_fields(company_df)
@@ -613,6 +674,8 @@ calc_market_position_kpi <- function(company_df, board_trading_df) {
   )
 }
 
+# 用途：基于上市公司数据构建市场定位公司明细表
+# 输入来源：data/raw/上市公司基本情况.xlsx
 build_market_position_company_detail <- function(company_df) {
   if (!all(c("company_code", "total_market_cap_yi", "float_market_cap_yi", "pe") %in% names(company_df))) {
     company_df <- standardize_company_fields(company_df)
@@ -629,6 +692,7 @@ build_market_position_company_detail <- function(company_df) {
     board = bse$board,
     listing_date = ifelse(is.na(bse$listing_date), NA_character_, format(bse$listing_date, "%Y-%m-%d")),
     industry = bse$industry,
+    city = if ("city" %in% names(bse)) bse$city else NA_character_,
     total_market_cap_yi = round(bse$total_market_cap_yi, 4),
     float_market_cap_yi = round(bse$float_market_cap_yi, 4),
     pe = round(bse$pe, 4),
@@ -641,10 +705,14 @@ build_market_position_company_detail <- function(company_df) {
   out[order(out$market_cap_rank, na.last = TRUE), , drop = FALSE]
 }
 
+# 用途：以 UTF-8 编码写入 CSV 文件
+# 输入来源：函数输入参数
 write_csv_utf8 <- function(df, path) {
   utils::write.csv(df, path, row.names = FALSE, na = "", fileEncoding = "UTF-8")
 }
 
+# 用途：执行基础数据处理流程，生成 market_position 相关 processed 表
+# 输入来源：data/raw/上市公司基本情况.xlsx、data/raw/市场板块成交统计.xlsx
 write_processed_market_position <- function(output_dir = "data/processed",
                                             company_path = "data/raw/上市公司基本情况.xlsx",
                                             board_trading_path = "data/raw/市场板块成交统计.xlsx") {
@@ -692,6 +760,8 @@ write_processed_market_position <- function(output_dir = "data/processed",
   ))
 }
 
+# 用途：基础数据处理入口函数，执行处理并打印关键指标
+# 输入来源：data/raw/上市公司基本情况.xlsx、data/raw/市场板块成交统计.xlsx
 process_basic_data <- function() {
   result <- write_processed_market_position()
   kpi <- result$kpi[1, , drop = FALSE]

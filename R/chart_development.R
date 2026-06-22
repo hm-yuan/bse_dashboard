@@ -1,3 +1,5 @@
+# 用途：绘制年度上市与融资趋势图（新增上市柱状图 + IPO/再融资折线图组合）。
+# 输入来源：`calc_listing_financing_trend()` 的输出数据框。
 # Input: listing and financing trend metrics. Output: a column-line trend chart.
 plot_listing_financing_trend <- function(df) {
   required <- c("year", "new_listing_count", "ipo_financing_amount_yi", "refinancing_amount_yi")
@@ -14,7 +16,7 @@ plot_listing_financing_trend <- function(df) {
 
   chart_widget(
     chart_hc_base("column") |>
-      highcharter::hc_xAxis(xAxis = chart_hc_axis("", categories = categories)) |>
+      hc_x_axis("", categories = categories) |>
       highcharter::hc_yAxis_multiples(
         chart_hc_axis("新增上市（家）", min = 0),
         chart_hc_axis("融资金额（亿元）", opposite = TRUE, min = 0)
@@ -27,6 +29,8 @@ plot_listing_financing_trend <- function(df) {
   )
 }
 
+# 用途：绘制交易活跃与市场生态趋势图（成交金额、活跃公司、换手率多轴组合）。
+# 输入来源：`calc_trading_ecosystem_trend()` 的输出数据框。
 # Input: trading and ecosystem trend metrics. Output: a multi-axis trend chart.
 plot_trading_ecosystem_trend <- function(df) {
   required <- c("period", "turnover_amount_yi", "active_company_count", "avg_turnover_rate")

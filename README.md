@@ -93,14 +93,15 @@ generate_demo_processed_data()
 
 ## 当前阶段说明
 
-- 已实现五个页面导航：首页总览、市场定位画像、上市公司画像、市场发展画像、市场质量画像。
+- 已实现五个页面导航：首页总览、市场定位、公司画像、市场生态、市场质量画像。
 - 每个页面包含页面标题、一句话核心判断、KPI 卡片区、主图区、关键洞察区和明细表区。
 - 当前 Shiny 数据统一通过 `R/data_access.R` 读取，不在页面 module 中直接读取原始文件。
 - 原始真实数据保存在 `data/raw/`，只作为数据处理输入，不由 Shiny 页面直接消费。
-- 清洗和标准化后的处理结果保存在 `data/processed/`。当前市场定位画像优先读取：
+- 清洗和标准化后的处理结果保存在 `data/processed/`。当前市场定位优先读取：
   - `data/processed/market_position_kpi.csv`
   - `data/processed/market_position_company_detail.csv`
   - `data/processed/data_quality_log.csv`
+- 中国省级地图数据缓存于 `data/cache/china-cn-all.geo.json`，用于离线渲染包含台湾地区的上市公司地域分布图。
 - 后续画像页面所需的标准演示表也保存在 `data/processed/`，由 `R/data_prepare.R` 生成。
 - 如果关键 processed 文件缺失或读取失败，`load_dashboard_data()` 会给出 warning，并回退到 `R/sample_data.R` 的演示数据，保证应用仍可启动。
 

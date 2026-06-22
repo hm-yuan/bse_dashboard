@@ -2,6 +2,8 @@
 # Input: the list returned by load_dashboard_data().
 # Output: KPI data frames, chart-ready data frames, or insight character vectors.
 
+# 用途：将公司、市场、财务、募资、风险等最新数据按 company_code 合并，供质量画像复用
+# 输入来源：`dashboard_data$dim_company`、`dashboard_data$fact_market_period`、`dashboard_data$fact_financial_period`、`dashboard_data$fact_fundraising_use`、`dashboard_data$fact_risk_tag`
 quality_latest_joined_data <- function(data) {
   dim_company <- metric_table(data, "dim_company")
   market <- metric_table(data, "fact_market_period")
@@ -42,6 +44,8 @@ quality_latest_joined_data <- function(data) {
   out
 }
 
+# 用途：计算市场质量画像的核心 KPI 卡片数据（低流动性、高估值低增长、连续亏损、监管措施、募投异常、退市风险）
+# 输入来源：`quality_latest_joined_data()` 结果、`dashboard_data$fact_risk_tag`、`dashboard_data$fact_supervision`、`dashboard_data$fact_fundraising_use`、`config/thresholds.yml`
 calc_quality_kpis <- function(data) {
   joined <- quality_latest_joined_data(data)
   risk <- metric_table(data, "fact_risk_tag")
@@ -88,6 +92,8 @@ calc_quality_kpis <- function(data) {
   )
 }
 
+# 用途：基于 ROE、净利率、经营现金流、研发费率计算公司质量评分矩阵
+# 输入来源：`quality_latest_joined_data()` 结果
 calc_quality_status_matrix <- function(data) {
   joined <- quality_latest_joined_data(data)
   if (!metric_has_cols(joined, c("company_code", "company_name", "industry"))) {
@@ -110,6 +116,8 @@ calc_quality_status_matrix <- function(data) {
   )
 }
 
+# 用途：按行业和风险类型统计风险公司数量及高风险公司数量，用于热力图
+# 输入来源：`dashboard_data$fact_risk_tag`、`dashboard_data$dim_company`
 calc_risk_industry_heatmap <- function(data) {
   risk <- metric_table(data, "fact_risk_tag")
   dim_company <- metric_table(data, "dim_company")
@@ -131,6 +139,8 @@ calc_risk_industry_heatmap <- function(data) {
   out[order(out$risk_count, decreasing = TRUE), , drop = FALSE]
 }
 
+# 用途：生成市场质量画像的文字洞察
+# 输入来源：`calc_quality_kpis()`、`calc_risk_industry_heatmap()` 结果
 calc_quality_insights <- function(data) {
   kpis <- calc_quality_kpis(data)
   heatmap <- calc_risk_industry_heatmap(data)
@@ -143,6 +153,8 @@ calc_quality_insights <- function(data) {
   )
 }
 
+# 用途：生成市场质量画像的公司风险明细表
+# 输入来源：`quality_latest_joined_data()` 结果、`dashboard_data$fact_risk_tag`、`dashboard_data$fact_supervision`
 calc_quality_company_detail <- function(data) {
   joined <- quality_latest_joined_data(data)
   risk <- metric_table(data, "fact_risk_tag")
