@@ -369,28 +369,33 @@ calc_company_detail <- function(data) {
 }
 
 # 用途：提取北交所公司最新一期营业收入与净利润，用于营收-净利润散点图。
-# 输入来源：`dashboard_data$dim_company`、`dashboard_data$fact_financial_period`
-calc_company_revenue_profit_scatter <- function(data) {
-  dim_company <- metric_table(data, "dim_company")
-  financial <- metric_table(data, "fact_financial_period")
-  if (!metric_has_cols(dim_company, c("company_code", "company_name")) ||
-      nrow(dim_company) == 0L || nrow(financial) == 0L) {
+# 输入来源：`data/raw/上市公司基本情况.xlsx`
+calc_company_revenue_profit_scatter <- function(data = NULL) {
+  path <- "data/raw/上市公司基本情况.xlsx"
+  if (!file.exists(path) || !requireNamespace("readxl", quietly = TRUE)) {
+    return(data.frame(company_name = character(), revenue_yi = numeric(), net_profit_yi = numeric(), stringsAsFactors = FALSE))
+  }
+  raw <- tryCatch({
+    raw_df <- as.data.frame(readxl::read_excel(path, sheet = "公司", .name_repair = "unique"), stringsAsFactors = FALSE)
+    board_col <- intersect(c("上市板块", "板块", "board", "market"), names(raw_df))[[1]]
+    if (!is.na(board_col)) {
+      raw_df <- raw_df[trimws(as.character(raw_df[[board_col]])) %in% c("北证", "北交所"), , drop = FALSE]
+    }
+    raw_df
+  }, error = function(e) NULL)
+  if (is.null(raw) || nrow(raw) == 0L) {
     return(data.frame(company_name = character(), revenue_yi = numeric(), net_profit_yi = numeric(), stringsAsFactors = FALSE))
   }
 
-  pair <- metric_latest_financial_pair(financial)
-  if (nrow(pair$latest) == 0L) return(data.frame(company_name = character(), revenue_yi = numeric(), net_profit_yi = numeric(), stringsAsFactors = FALSE))
+  revenue <- metric_num(raw[["2025年营业收入"]])
+  profit <- metric_num(raw[["2025年净利润"]])
 
-  merged <- merge(
-    dim_company[, c("company_code", "company_name"), drop = FALSE],
-    pair$latest[, c("company_code", "revenue_yi", "net_profit_yi"), drop = FALSE],
-    by = "company_code", all.x = TRUE
+  data.frame(
+    company_name = raw[["名称"]],
+    revenue_yi = revenue,
+    net_profit_yi = profit,
+    stringsAsFactors = FALSE
   )
-  merged$revenue_yi <- metric_num(merged$revenue_yi)
-  merged$net_profit_yi <- metric_num(merged$net_profit_yi)
-  merged <- merged[is.finite(merged$revenue_yi) & is.finite(merged$net_profit_yi), , drop = FALSE]
-  merged <- merged[order(merged$revenue_yi, decreasing = TRUE, na.last = TRUE), , drop = FALSE]
-  merged
 }
 
 # 用途：从"上市公司基本情况.xlsx"读取北交所公司财务汇总表。
