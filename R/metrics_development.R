@@ -150,3 +150,36 @@ calc_development_detail <- function(data) {
   }))
   out[order(out$year, decreasing = TRUE), , drop = FALSE]
 }
+
+# 用途：从时间序列数据 Excel 读取三大指数走势，以 2022-04-29 为基准计算涨跌幅
+# 输入来源：data/raw/时间序列数据.xlsx
+# 输出：包含 date, 创业板指, 科创50指数, 北证50指数 列的数据框（涨跌幅百分比）
+calc_index_trend <- function(data = NULL) {
+  path <- "data/raw/时间序列数据.xlsx"
+  if (!file.exists(path)) {
+    return(data.frame(date = as.Date(character()), `创业板指` = numeric(), `科创50指数` = numeric(), `北证50指数` = numeric(), check.names = FALSE))
+  }
+  raw <- tryCatch({
+    df <- as.data.frame(readxl::read_excel(path), stringsAsFactors = FALSE)
+    names(df)[[1]] <- "date"
+    df$date <- as.Date(df$date)
+    df
+  }, error = function(e) NULL)
+  if (is.null(raw) || nrow(raw) == 0L) {
+    return(data.frame(date = as.Date(character()), `创业板指` = numeric(), `科创50指数` = numeric(), `北证50指数` = numeric(), check.names = FALSE))
+  }
+
+  base_row <- raw[raw$date == as.Date("2022-04-29"), , drop = FALSE]
+  if (nrow(base_row) == 0L) return(raw)
+
+  out <- raw
+  for (col in c("创业板指", "科创50指数", "北证50指数")) {
+    if (col %in% names(raw)) {
+      base_val <- chart_safe_number(base_row[[col]][[1]])
+      if (is.finite(base_val) && base_val > 0) {
+        out[[col]] <- (chart_safe_number(raw[[col]]) / base_val - 1) * 100
+      }
+    }
+  }
+  out
+}

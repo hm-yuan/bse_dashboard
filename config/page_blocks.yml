@@ -44,7 +44,7 @@ pages:
       - { label: "研发费用率中位数", unit: "%", min: 3, max: 10, digits: 1 }
       - { label: "募集资金使用比例", unit: "%", min: 56, max: 86, digits: 1 }
     charts:
-      - { id: "company_geo_map", type: "company_geo_map", title: "上市公司全国地域分布", note: "省级色块：上市公司数量；城市气泡：该城市上市公司数量", span: "equal" }
+      - { id: "company_geo_map", type: "company_geo_map", title: "上市公司基本情况", note: "省级色块：上市公司数量；城市气泡：该城市上市公司数量", span: "equal" }
       - { id: "company_heatmap", type: "company_heatmap", title: "行业结构与经营贡献矩阵", note: "行业在公司数、市值、营收、净利润和研发方面的相对贡献", span: "equal" }
       - { id: "company_quadrant", type: "company_quadrant", title: "成长性 × 盈利能力四象限", note: "横轴：营收增速；纵轴：ROE；气泡大小：市值", span: "equal" }
     table: { title: "上市公司结构明细", type: "company_profile", note: "演示数据，待接入业务口径" }

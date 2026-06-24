@@ -203,7 +203,7 @@ plot_market_position_bubble <- function(df) {
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
   board_palette <- c("#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#f7904cff")
   names(board_palette) <- board_order
-  # 调色盘 c("#002B5B", "#CE5959", "#F9F5EB", "#9d9b9bff", "#f7904cff")
+  # 调色盘 c("#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#f7904cff")
   # 气泡图数据中的市场名称与板块配色名称略有差异，建立映射关系。
   market_to_board <- c(
     "沪市主板" = "上证主板",
@@ -942,7 +942,7 @@ plot_board_trading <- function(metric = c("turnover_amount_yi", "avg_daily_turno
   }
 
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#f7904cff")
+  board_palette <- c("#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#E8AA42")
   names(board_palette) <- board_order
 
   df$year <- format(df$date, "%Y")
@@ -1006,7 +1006,7 @@ plot_board_daily_turnover_area <- function() {
   }
 
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#002B5B", "#CE5959", "#9d9b9bff", "#9d9b9bff", "#f7904cff")
+  board_palette <- c("#002B5B", "#CE5959",  "#F9F5EB", "#D8D8D8", "#f7904cff")
   names(board_palette) <- board_order
 
   df <- df[!is.na(df$avg_daily_turnover_yi) & df$avg_daily_turnover_yi >= 0, , drop = FALSE]
@@ -1213,7 +1213,7 @@ plot_market_cap_distribution_bar <- function(df) {
 
   boards <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
   buckets <- c("<50亿", "50-100亿", "100-300亿", "300-1000亿", "1000亿以上")
-  palette <- c("#002B5B", "#CE5959", "#9d9b9bff", "#9d9b9bff", "#f7904cff")
+  palette <- c( "#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#E8AA42")
 
   hc <- chart_hc_base("column") |>
     hc_x_axis("", categories = boards) |>
@@ -1251,7 +1251,7 @@ plot_market_cap_distribution_bar <- function(df) {
       itemStyle = list(fontSize = "10px")
     )
 
-  for (i in seq_along(buckets)) {
+  for (i in rev(seq_along(buckets))) {
     b <- buckets[[i]]
     sub <- df[df$bucket == b, c("board", "count"), drop = FALSE]
     series_data <- lapply(boards, function(bd) {

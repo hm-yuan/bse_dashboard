@@ -18,9 +18,9 @@ ui <- page_navbar(
   header = tags$head(
     tags$link(rel = "stylesheet", type = "text/css", href = "custom.css"),
     tags$script(src = "force_chart_width.js"),
-    tags$script(src = "kpi_flip.js")
+    tags$script(src = "kpi_flip.js"),
+    tags$script(src = "stock_mini_chart.js?v=5")
   ),
-  nav_panel("首页总览", homeUI("home")),
   nav_panel("市场定位", marketPositionUI("market_position")),
   nav_panel("公司画像", companyProfileUI("company_profile")),
   nav_panel("市场生态", marketDevelopmentUI("market_development")),
@@ -28,7 +28,6 @@ ui <- page_navbar(
 )
 
 server <- function(input, output, session) {
-  homeServer("home")
   marketPositionServer("market_position")
   companyProfileServer("company_profile")
   marketDevelopmentServer("market_development")

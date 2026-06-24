@@ -71,152 +71,572 @@ plot_company_industry_matrix <- function(df) {
 
 # 用途：绘制中国省级公司分布地图；省级色块表示公司数量，城市气泡表示城市公司数量。
 # 输入来源：`calc_company_geography()` 输出的省级与城市汇总数据。
-plot_company_geography_map <- function(geo) {
+plot_company_geography_map <- function(geo, bse_geo = NULL, geo_click_input_id = NULL) {
   if (!chart_has_highcharter()) {
     return(chart_empty_state("未检测到 highcharter，无法渲染中国公司分布地图。"))
   }
-  if (is.null(geo) || !is.data.frame(geo$provinces) || !is.data.frame(geo$cities) || nrow(geo$cities) == 0L) {
-    return(chart_empty_state("暂无可用的公司城市数据。"))
+
+  if (
+    is.null(geo) ||
+      !is.data.frame(geo$provinces) ||
+      nrow(geo$provinces) == 0L
+  ) {
+    return(chart_empty_state("暂无可用的省级公司分布数据。"))
   }
 
   map_cache <- file.path("data", "cache", "china-cn-all.geo.json")
+
   map_data <- if (file.exists(map_cache) && requireNamespace("jsonlite", quietly = TRUE)) {
-    tryCatch(jsonlite::fromJSON(map_cache, simplifyVector = FALSE), error = function(e) NULL)
+    tryCatch(
+      jsonlite::fromJSON(map_cache, simplifyVector = FALSE),
+      error = function(e) NULL
+    )
   } else {
-    tryCatch(highcharter::download_map_data("countries/cn/cn-all"), error = function(e) NULL)
+    tryCatch(
+      highcharter::download_map_data("countries/cn/cn-all"),
+      error = function(e) NULL
+    )
   }
+
   if (is.null(map_data)) {
     return(chart_empty_state("中国地图底图加载失败，请检查本地地图缓存与 Highcharts Map 数据可用性。"))
   }
 
-  colors <- chart_colors()
   province_data <- geo$provinces[, c("hc_key", "province", "company_count"), drop = FALSE]
   names(province_data) <- c("hc_key", "name", "value")
-  city_points <- geo$cities
-  city_points$longitude <- chart_safe_number(city_points$longitude)
-  city_points$latitude <- chart_safe_number(city_points$latitude)
-  city_points$company_count <- chart_safe_number(city_points$company_count)
-  city_points <- city_points[
-    is.finite(city_points$longitude) &
-      is.finite(city_points$latitude) &
-      is.finite(city_points$company_count) &
-      city_points$company_count > 0,
-    ,
-    drop = FALSE
-  ]
-  if (nrow(city_points) == 0L) {
-    return(chart_empty_state("暂无可定位的公司城市数据。"))
+
+  # 计算北交所公司总数（用于 tooltip 占比）
+  total_bse_count <- 0
+  if (is.data.frame(bse_geo$provinces) && nrow(bse_geo$provinces) > 0L) {
+    total_bse_count <- sum(bse_geo$provinces$company_count, na.rm = TRUE)
+  }
+  if (total_bse_count <= 0 && is.data.frame(geo$provinces) && nrow(geo$provinces) > 0L) {
+    total_bse_count <- sum(geo$provinces$company_count, na.rm = TRUE)
+  }
+  if (total_bse_count <= 0) total_bse_count <- 1
+
+  # 共享的 tooltip formatter
+  tooltip_formatter <- sprintf("
+    function () {
+      if (
+        this.point &&
+        this.point.series &&
+        this.point.series.type === 'mappoint'
+      ) {
+        var pct = (this.point.company_count || 0) / %s * 100;
+        var tip = '<div style=\"min-width:180px;\">' +
+          '<div style=\"font-weight:700;color:#0F172A;margin-bottom:6px;\">' +
+            this.point.name +
+          '</div>' +
+          '<div style=\"color:#475569;line-height:1.7;\">' +
+            '所在省份：' + (this.point.province || '-') + '<br/>' +
+            '北交所公司：<b style=\"color:#0F172A;\">' +
+              Highcharts.numberFormat(this.point.company_count || 0, 0) +
+            '</b> 家 / <b style=\"color:#0F172A;\">' +
+              Highcharts.numberFormat(pct, 1) +
+            '</b>%%';
+
+        if (this.point.top_companies) {
+          tip += '<div style=\"margin-top:6px;padding-top:6px;border-top:1px solid #E2E8F0;\">' +
+            '<div style=\"font-weight:600;color:#0F172A;margin-bottom:3px;\">代表公司</div>';
+          if (this.point.top_companies.indexOf('、') > -1) {
+            var names = this.point.top_companies.split('、');
+            var caps = this.point.top_caps ? this.point.top_caps.split('、') : [];
+            for (var j = 0; j < names.length; j++) {
+              tip += '<div>' + (j+1) + '. ' + names[j] +
+                (caps[j] ? '（' + caps[j] + ' 亿）' : '') + '</div>';
+            }
+          } else {
+            tip += '<div>' + this.point.top_companies +
+              (this.point.top_caps ? '（' + this.point.top_caps + ' 亿）' : '') + '</div>';
+          }
+          tip += '</div>';
+        }
+
+        tip += '</div></div>';
+        return tip;
+      }
+
+      var pctProv = (this.point.value || 0) / %s * 100;
+      return '<div style=\"min-width:140px;\">' +
+               '<div style=\"font-weight:700;color:#0F172A;margin-bottom:4px;\">' +
+                 this.point.name +
+               '</div>' +
+               '<div style=\"color:#475569;line-height:1.6;\">' +
+                 '上市公司：<b style=\"color:#0F172A;\">' +
+                   Highcharts.numberFormat(this.point.value || 0, 0) +
+                 '</b> 家 / <b style=\"color:#0F172A;\">' +
+                   Highcharts.numberFormat(pctProv, 1) +
+                 '</b>%%' +
+               '</div>' +
+             '</div>';
+    }
+  ", total_bse_count, total_bse_count)
+
+  # 北交所城市气泡分档函数
+  # 阈值 c(5, 10, 20)，形成四档：
+  # ≤5、6-10、11-20、>20
+  bse_city_level <- function(x) {
+    if (is.na(x)) {
+      return("无数据")
+    } else if (x <= 5) {
+      return("≤5 家")
+    } else if (x <= 10) {
+      return("6-10 家")
+    } else if (x <= 20) {
+      return("11-20 家")
+    } else {
+      return(">20 家")
+    }
   }
 
-  # `mapbubble` 的尺寸转换在当前 Highcharts Map 组合中会导致城市层丢失。
-  # 使用地图原生 `mappoint`，并在 R 侧按公司数量计算半径，保留气泡图的表达口径。
-  max_city_count <- max(city_points$company_count)
-  city_data <- lapply(seq_len(nrow(city_points)), function(i) {
-    radius <- 4 + 11 * sqrt(city_points$company_count[[i]] / max_city_count)
-    list(
-      name = city_points$city[[i]],
-      province = city_points$province[[i]],
-      lon = city_points$longitude[[i]],
-      lat = city_points$latitude[[i]],
-      company_count = city_points$company_count[[i]],
-      marker = list(radius = radius)
-    )
-  })
+  # 北交所城市气泡颜色函数
+  # 北交所城市气泡颜色函数
+# 从高到低使用：
+# >20     "#002B5B"
+# 11-20   "#CE5959"
+# 6-10    "#E49393"
+# ≤5      "#E8AA42"
+bse_city_color <- function(x) {
+  if (is.na(x)) {
+    return("#002B5B")
+  } else if (x > 15) {
+    return("#CE5959")
+  } else if (x > 10) {
+    return("#CE5959")
+  } else if (x > 5) {
+    return("#E49393")
+  } else {
+    return("#E8AA42")
+  }
+}
 
-  chart_hc_base("map") |>
+  hc <- chart_hc_base("map") |>
     highcharter::hc_add_dependency("modules/map.js") |>
-    highcharter::hc_chart(backgroundColor = "transparent") |>
+    highcharter::hc_chart(
+      map = map_data,
+      backgroundColor = "transparent"
+    ) |>
     highcharter::hc_add_series(
       type = "map",
-      mapData = map_data,
       name = "省级公司数量",
       data = province_data,
       joinBy = c("hc-key", "hc_key"),
-      borderColor = "#FFFFFF",
+      borderColor = "#002B5B",
       borderWidth = 0.8,
-      nullColor = "#F7F7F7"
+      nullColor = "#F4F5F7",
+      showInLegend = FALSE,
+      states = list(
+        hover = list(
+          color = "#6B7280"
+        )
+      )
     ) |>
     highcharter::hc_colorAxis(
       min = 0,
-      minColor = "#E8F0F8",
+      minColor = "#F4F5F7",
       maxColor = "#002B5B",
-      labels = list(format = "{value} 家")
-    ) |>
-    highcharter::hc_add_series(
-      type = "mappoint",
-      name = "城市公司数量",
-      data = city_data,
-      color = "#00A6C8",
-      marker = list(lineColor = "#FFFFFF", lineWidth = 1, fillOpacity = 0.85)
-    ) |>
-    highcharter::hc_mapNavigation(enabled = TRUE, enableButtons = FALSE) |>
-    highcharter::hc_tooltip(
-      useHTML = TRUE,
-      formatter = highcharter::JS("function(){ if (this.point.series.type === 'mappoint') { return '<b>'+this.point.name+'</b><br/>所在省份：'+this.point.province+'<br/>上市公司：'+Highcharts.numberFormat(this.point.company_count,0)+' 家'; } return '<b>'+this.point.name+'</b><br/>上市公司：'+Highcharts.numberFormat(this.point.value || 0,0)+' 家'; }")
+      labels = list(
+        format = "{value} 家",
+        style = list(
+          color = "#4B5563",
+          fontSize = "11px"
+        )
+      )
+    )
+
+  # 仅叠加北交所公司城市分布
+  if (!is.null(bse_geo) && is.data.frame(bse_geo$cities) && nrow(bse_geo$cities) > 0L) {
+    bse_points <- bse_geo$cities
+    bse_points$longitude <- chart_safe_number(bse_points$longitude)
+    bse_points$latitude <- chart_safe_number(bse_points$latitude)
+    bse_points$company_count <- chart_safe_number(bse_points$company_count)
+
+    bse_points <- bse_points[
+      is.finite(bse_points$longitude) &
+        is.finite(bse_points$latitude) &
+        is.finite(bse_points$company_count) &
+        bse_points$company_count > 0,
+      ,
+      drop = FALSE
+    ]
+
+    if (nrow(bse_points) > 0L) {
+      max_bse_count <- max(bse_points$company_count, na.rm = TRUE)
+
+      # 构建同省公司数量查找表
+      province_count_lookup <- stats::setNames(
+        bse_geo$provinces$company_count,
+        bse_geo$provinces$province
+      )
+
+      # 构建城市代表公司查找表（city_key = 去掉"市"后缀）
+      city_key <- function(x) gsub("市$", "", trimws(as.character(x)))
+      bse_top_lookup <- NULL
+      if (!is.null(bse_geo$city_top_companies) && is.data.frame(bse_geo$city_top_companies) && nrow(bse_geo$city_top_companies) > 0L) {
+        bse_top_lookup <- bse_geo$city_top_companies
+        rownames(bse_top_lookup) <- bse_top_lookup$city_key
+      }
+
+      bse_data <- lapply(seq_len(nrow(bse_points)), function(i) {
+        count <- bse_points$company_count[[i]]
+        radius <- 1 + 16 * sqrt(count / max_bse_count)
+        point_color <- bse_city_color(count)
+
+        city_province <- bse_points$province[[i]]
+        prov_count <- province_count_lookup[city_province]
+        if (is.na(prov_count)) prov_count <- 0
+
+        ck <- city_key(bse_points$city[[i]])
+        top_info <- if (!is.null(bse_top_lookup) && ck %in% rownames(bse_top_lookup)) {
+          bse_top_lookup[ck, , drop = FALSE]
+        } else NULL
+
+        list(
+          name = bse_points$city[[i]],
+          province = city_province,
+          company_count = count,
+          province_count = prov_count,
+          top_companies = if (!is.null(top_info)) top_info$top_companies[[1]] else "",
+          top_caps = if (!is.null(top_info)) top_info$top_caps[[1]] else "",
+          color = point_color,
+
+          # 使用 GeoJSON geometry 定位点位
+          geometry = list(
+            type = "Point",
+            coordinates = c(
+              bse_points$longitude[[i]],
+              bse_points$latitude[[i]]
+            )
+          ),
+
+          marker = list(
+            enabled = TRUE,
+            radius = radius,
+            symbol = "circle",
+            fillColor = point_color,
+            lineColor = "#FFFFFF",
+            lineWidth = 1.5
+          )
+        )
+      })
+
+      hc <- hc |>
+        highcharter::hc_add_series(
+          type = "mappoint",
+          name = "北交所公司数量",
+          data = bse_data,
+          color = "#E8AA42",
+          showInLegend = TRUE,
+          zIndex = 21,
+          marker = list(
+            enabled = TRUE,
+            symbol = "circle",
+            lineColor = "#FFFFFF",
+            lineWidth = 1.5,
+            fillOpacity = 0.92
+          ),
+          states = list(
+            hover = list(
+              enabled = TRUE,
+              brightness = 0.08,
+              lineWidthPlus = 1
+            )
+          )
+        )
+    }
+  }
+
+  # 手动设置 tooltip，避免 list.merge 合并时破坏 JS_EVAL 对象
+  hc$x$hc_opts$tooltip <- list(
+    useHTML = TRUE,
+    backgroundColor = "rgba(255, 255, 255, 0.96)",
+    borderColor = "#CBD5E1",
+    borderRadius = 4,
+    shadow = TRUE,
+    formatter = highcharter::JS(tooltip_formatter)
+  )
+
+  hc |>
+    highcharter::hc_mapNavigation(
+      enabled = TRUE,
+      enableButtons = FALSE
     ) |>
     highcharter::hc_legend(
-      layout = "horizontal",
-      align = "center",
-      verticalAlign = "bottom",
-      symbolRadius = 2
+      enabled = TRUE,
+      layout = "vertical",
+      align = "left",
+      verticalAlign = "middle",
+      floating = TRUE,
+      symbolRadius = 3,
+      itemStyle = list(
+        color = "#334155",
+        fontSize = "11px",
+        fontWeight = "600"
+      )
     ) |>
-    highcharter::hc_credits(enabled = FALSE)
+    highcharter::hc_credits(
+      enabled = FALSE
+    )
+
+  # 注册点击事件以联动散点图和表格
+  if (!is.null(geo_click_input_id)) {
+    click_js <- sprintf(
+      "function() {
+        var data = {};
+        if (this.series.type === 'mappoint') {
+          data.city = this.name || '';
+          data.province = this.province || '';
+        } else {
+          data.province = this.name || '';
+          data.city = '';
+        }
+        Shiny.setInputValue('%s', data, {priority: 'event'});
+      }",
+      geo_click_input_id
+    )
+    hc <- hc |>
+      highcharter::hc_plotOptions(
+        series = list(
+          point = list(
+            events = list(
+              click = htmlwidgets::JS(click_js)
+            )
+          )
+        )
+      )
+  }
+
+  return(hc)
 }
 
-# 用途：绘制公司成长性与盈利能力四象限气泡图。
-# 输入来源：`calc_company_quality_quadrant()` 的输出数据框。
-# Input: company growth-profitability metrics. Output: a labelled bubble quadrant.
-plot_company_quality_quadrant <- function(df) {
-  required <- c("company_name", "industry", "revenue_growth", "roe", "total_market_cap_yi")
-  if (!is.data.frame(df) || nrow(df) == 0L || !all(required %in% names(df))) {
-    return(chart_empty_state("暂无成长性与盈利能力数据"))
+
+# 用途：绘制北交所公司营业收入 vs 净利润散点图。
+# 输入来源：`calc_company_revenue_profit_scatter()` 的输出数据框。
+plot_company_revenue_profit_scatter <- function(df) {
+  if (!is.data.frame(df) || nrow(df) == 0L) {
+    return(chart_empty_state("暂无营业收入与净利润数据"))
   }
   if (!chart_has_highcharter()) {
-    return(chart_fallback_table("成长性与盈利能力四象限", df, "未检测到 highcharter，已显示公司指标数据。"))
+    return(chart_fallback_table("营业收入与净利润", df, "未检测到 highcharter。"))
   }
 
   colors <- chart_colors()
-  plot_df <- df
-  plot_df$revenue_growth <- chart_safe_number(plot_df$revenue_growth)
-  plot_df$roe <- chart_safe_number(plot_df$roe)
-  plot_df$total_market_cap_yi <- chart_safe_number(plot_df$total_market_cap_yi)
-  plot_df <- plot_df[is.finite(plot_df$revenue_growth) & is.finite(plot_df$roe), , drop = FALSE]
-  if (nrow(plot_df) == 0L) return(chart_empty_state("暂无有效的成长与盈利指标"))
 
-  x_mid <- stats::median(plot_df$revenue_growth, na.rm = TRUE)
-  y_mid <- stats::median(plot_df$roe, na.rm = TRUE)
-  plot_df$quadrant <- ifelse(
-    plot_df$revenue_growth >= x_mid & plot_df$roe >= y_mid, "高成长 · 高盈利",
-    ifelse(plot_df$revenue_growth >= x_mid, "高成长 · 待盈利", ifelse(plot_df$roe >= y_mid, "稳健盈利", "承压观察"))
-  )
-  palette <- c("高成长 · 高盈利" = colors$bse_blue, "高成长 · 待盈利" = colors$bse_cyan, "稳健盈利" = colors$success, "承压观察" = colors$warning)
-  x_range <- range(plot_df$revenue_growth, na.rm = TRUE)
-  y_range <- range(plot_df$roe, na.rm = TRUE)
-  x_pad <- max(diff(x_range) * 0.08, 1)
-  y_pad <- max(diff(y_range) * 0.08, 1)
+  df$revenue_yi <- chart_safe_number(df$revenue_yi)
+  df$net_profit_yi <- chart_safe_number(df$net_profit_yi)
 
-  chart <- chart_hc_base("bubble") |>
-    hc_x_axis(
-      "营业收入增速（%）", min = x_range[[1]] - x_pad, max = x_range[[2]] + x_pad,
-      plot_lines = list(list(value = x_mid, color = "#9AA9B8", width = 1, dashStyle = "Dash", zIndex = 3))
-    ) |>
-    hc_y_axis(
-      "ROE（%）", min = y_range[[1]] - y_pad, max = y_range[[2]] + y_pad,
-      plot_lines = list(list(value = y_mid, color = "#9AA9B8", width = 1, dashStyle = "Dash", zIndex = 3))
-    ) |>
-    highcharter::hc_plotOptions(bubble = list(minSize = 6, maxSize = 48, marker = list(fillOpacity = 0.68))) |>
-    highcharter::hc_subtitle(text = "右上：高成长 · 高盈利；左下：承压观察", align = "left", style = list(color = "#60758D", fontSize = "11px"))
+  df <- df[
+    is.finite(df$revenue_yi) &
+      is.finite(df$net_profit_yi) &
+      df$revenue_yi > 0,
+    ,
+    drop = FALSE
+  ]
 
-  for (quadrant in names(palette)) {
-    part <- plot_df[plot_df$quadrant == quadrant, , drop = FALSE]
-    if (nrow(part) == 0L) next
-    points <- chart_bubble_points(part, "revenue_growth", "roe", "total_market_cap_yi", "company_name")
-    chart <- chart |>
-      highcharter::hc_add_series(name = quadrant, type = "bubble", color = palette[[quadrant]], data = points)
+  if (nrow(df) == 0L) {
+    return(chart_empty_state("暂无有效的营收与利润数据"))
   }
 
-  chart_widget(
-    chart |>
-      highcharter::hc_tooltip(pointFormat = "<b>{point.name}</b><br/>营收增速：{point.x:.1f}%<br/>ROE：{point.y:.1f}%<br/>总市值：{point.z:,.1f} 亿元")
+  # X轴希望展示的真实刻度
+  x_ticks <- c(1, 2, 4, 8, 15, 30, 50, 75, 100, 200)
+
+  # Y轴希望展示的真实刻度
+  y_ticks <- c(
+    -20, -10, -5, -2, -1.2, -0.8, -0.5, -0.3, -0.15,
+    0,
+    0.15, 0.3, 0.5, 0.8, 1.2, 2, 5, 10, 20
   )
+
+  # 将真实值映射为等距坐标位置
+  chart_equal_interval_position <- function(x, breaks) {
+    stats::approx(
+      x = breaks,
+      y = seq_along(breaks),
+      xout = x,
+      rule = 2
+    )$y
+  }
+
+  df$x_plot <- chart_equal_interval_position(df$revenue_yi, x_ticks)
+  df$y_plot <- chart_equal_interval_position(df$net_profit_yi, y_ticks)
+
+  # 计算中位数及在绘图坐标中的位置
+  revenue_median <- stats::median(df$revenue_yi, na.rm = TRUE)
+  profit_median <- stats::median(df$net_profit_yi, na.rm = TRUE)
+  x_median_pos <- chart_equal_interval_position(revenue_median, x_ticks)
+  y_median_pos <- chart_equal_interval_position(profit_median, y_ticks)
+  y_zero_pos   <- chart_equal_interval_position(0, y_ticks)
+
+  points <- lapply(seq_len(nrow(df)), function(i) {
+    list(
+      x = df$x_plot[[i]],
+      y = df$y_plot[[i]],
+      name = df$company_name[[i]],
+
+      # 保留真实值，用于 tooltip
+      revenue_yi = df$revenue_yi[[i]],
+      net_profit_yi = df$net_profit_yi[[i]]
+    )
+  })
+
+  chart_hc_base("scatter") |>
+    highcharter::hc_chart(backgroundColor = "#FFFFFF") |>
+    hc_x_axis(
+      "营业收入（亿元）",
+      type = "linear",
+      tick_positions = seq_along(x_ticks),
+      min = 1,
+      max = length(x_ticks),
+      labels = list(
+        formatter = htmlwidgets::JS(sprintf(
+          "
+          function () {
+            var labels = %s;
+            var idx = Math.round(this.value) - 1;
+            if (idx >= 0 && idx < labels.length) {
+              return labels[idx];
+            }
+            return '';
+          }
+          ",
+          jsonlite::toJSON(x_ticks, auto_unbox = TRUE)
+        ))
+      ),
+      plot_lines = list(list(
+  value = x_median_pos,
+  color = "#002B5B",
+  dashStyle = "ShortDash",
+  width = 1,
+  zIndex = 5,
+  label = list(
+    text = sprintf("营收中位数 %.2f 亿元", revenue_median),
+    align = "center",
+    verticalAlign = "bottom",
+
+    # 关键：负值向上移动
+    y = -52,
+
+    style = list(
+      color = "#002B5B",
+      fontSize = "10px",
+      fontWeight = "600"
+    )
+  )
+))
+    ) |>
+    hc_y_axis(
+      "净利润（亿元）",
+      type = "linear",
+      tick_positions = seq_along(y_ticks),
+      min = 1,
+      max = length(y_ticks),
+      labels = list(
+        formatter = htmlwidgets::JS(sprintf(
+          "
+          function () {
+            var labels = %s;
+            var idx = Math.round(this.value) - 1;
+            if (idx >= 0 && idx < labels.length) {
+              return labels[idx];
+            }
+            return '';
+          }
+          ",
+          jsonlite::toJSON(y_ticks, auto_unbox = TRUE)
+        ))
+      ),
+      plot_lines = list(
+        list(
+          value = y_zero_pos,
+          color = "#002B5B",
+          dashStyle = "Solid",
+          width = 2,
+          zIndex = 5
+        ),
+        list(
+          value = y_median_pos,
+          color = "#002B5B",
+          dashStyle = "ShortDash",
+          width = 1,
+          zIndex = 5,
+          label = list(
+            text = sprintf("净利润中位数 %.2f 亿元", profit_median),
+            align = "right",
+            verticalAlign = "middle",
+            x = 1,
+            style = list(color = "#002B5B", fontSize = "10px", fontWeight = "600")
+          )
+        )
+      )
+    ) |>
+    highcharter::hc_add_series(
+      name = "北交所公司",
+      data = points,
+      color = "#CE5959",
+      marker = list(
+        radius = 5,
+        fillOpacity = 0.7,
+        lineWidth = 1,
+        lineColor = "#FFFFFF"
+      )
+    ) |>
+    highcharter::hc_tooltip(
+      pointFormat = paste0(
+        "<b>{point.name}</b><br/>",
+        "营业收入：{point.revenue_yi:.2f} 亿元<br/>",
+        "净利润：{point.net_profit_yi:.2f} 亿元"
+      )
+    ) |>
+    highcharter::hc_legend(enabled = FALSE) |>
+    chart_widget()
+}
+
+# 用途：绘制公司经营状态圆环图。
+# 输入来源：`calc_company_operating_status_distribution()` 的输出数据框。
+plot_company_operating_status_donut <- function(df) {
+  if (!is.data.frame(df) || nrow(df) == 0L || sum(df$count, na.rm = TRUE) == 0L) {
+    return(chart_empty_state("暂无经营状态数据"))
+  }
+  if (!chart_has_highcharter()) {
+    return(chart_fallback_table("公司经营状态分布", df, "未检测到 highcharter"))
+  }
+
+  colors <- c("#002B5B", "#CE5959", "#F9F5EB", "#9d9b9bff", "#f7904cff")
+  df <- df[df$count > 0L, , drop = FALSE]
+  if (nrow(df) == 0L) {
+    return(chart_empty_state("暂无经营状态数据"))
+  }
+
+  pie_data <- lapply(seq_len(nrow(df)), function(i) {
+    list(name = df$status[[i]], y = df$count[[i]], color = colors[[(i - 1L) %% length(colors) + 1L]])
+  })
+
+  chart_hc_base() |>
+    highcharter::hc_chart(type = "pie", backgroundColor = "transparent") |>
+    highcharter::hc_title(text = NULL) |>
+    highcharter::hc_plotOptions(
+      pie = list(
+        innerSize = "60%",
+        startAngle = -90,
+        borderWidth = 1,
+        borderColor = "#FFFFFF",
+        dataLabels = list(
+          enabled = TRUE,
+          format = "{point.name}<br>{point.percentage:.1f}%",
+          style = list(fontSize = "8px", fontWeight = "500", textOutline = "none"),
+          distance = 8
+        ),
+        showInLegend = FALSE
+      )
+    ) |>
+    highcharter::hc_legend(enabled = FALSE) |>
+    highcharter::hc_tooltip(
+      pointFormat = "<b>{point.name}</b><br/>公司数：{point.y} 家 ({point.percentage:.1f}%)"
+    ) |>
+    highcharter::hc_add_series(
+      name = "公司数",
+      data = pie_data,
+      type = "pie"
+    )
 }

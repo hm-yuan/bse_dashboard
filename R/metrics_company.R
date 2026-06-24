@@ -2,35 +2,57 @@
 # Input: the list returned by load_dashboard_data().
 # Output: KPI data frames, chart-ready data frames, or insight character vectors.
 
-# 用途：计算公司画像的核心 KPI 卡片数据（营收、净利润、ROE、研发费率等）
-# 输入来源：`dashboard_data$fact_financial_period`、`dashboard_data$fact_fundraising_use`
+# 用途：计算公司画像的核心 KPI 卡片数据（营收、净利润、ROE、研发强度等）
+# 输入来源：`data/raw/上市公司基本情况.xlsx` 中 2025 年年报字段
 calc_company_profile_kpis <- function(data) {
-  financial <- metric_table(data, "fact_financial_period")
-  fundraising <- metric_table(data, "fact_fundraising_use")
-  pair <- metric_latest_financial_pair(financial)
-  latest <- pair$latest
-
-  if (!metric_has_cols(latest, c("revenue_yi", "net_profit_yi", "roe", "r_and_d_ratio"))) {
+  path <- "data/raw/上市公司基本情况.xlsx"
+  if (!file.exists(path) || !requireNamespace("readxl", quietly = TRUE)) {
     fallback <- data$company_profile$kpis
     if (is.data.frame(fallback)) return(fallback)
-    return(metric_make_kpis(c("营收中位数", "净利润中位数", "盈利公司占比", "ROE 中位数", "研发费用率中位数", "募集资金使用比例"), rep("--", 6), c("亿元", "亿元", "%", "%", "%", "%")))
+    return(metric_make_kpis(c("营收中位数", "净利润中位数", "盈利公司占比", "ROE 中位数", "研发强度中位数", "公发募资中位数"), rep("--", 6), c("亿元", "亿元", "%", "%", "%", "亿元")))
   }
 
-  profitable_ratio <- mean(metric_num(latest$net_profit_yi) > 0, na.rm = TRUE)
-  use_progress <- if (metric_has_cols(fundraising, "use_progress")) metric_safe_mean(fundraising$use_progress) else NA_real_
+  raw <- tryCatch({
+    raw_df <- as.data.frame(readxl::read_excel(path, sheet = "公司", .name_repair = "unique"), stringsAsFactors = FALSE)
+    # 筛选北交所公司
+    board_col <- intersect(c("上市板块", "板块", "board", "market"), names(raw_df))[[1]]
+    if (!is.na(board_col)) {
+      raw_df <- raw_df[trimws(as.character(raw_df[[board_col]])) %in% c("北证", "北交所"), , drop = FALSE]
+    }
+    raw_df
+  }, error = function(e) NULL)
+
+  if (is.null(raw) || nrow(raw) == 0L) {
+    fallback <- data$company_profile$kpis
+    if (is.data.frame(fallback)) return(fallback)
+    return(metric_make_kpis(c("营收中位数", "净利润中位数", "盈利公司占比", "ROE 中位数", "研发强度中位数", "公发募资中位数"), rep("--", 6), c("亿元", "亿元", "%", "%", "%", "亿元")))
+  }
+
+  revenue <- metric_num(raw[["2025年营业收入"]])
+  net_profit <- metric_num(raw[["2025年净利润"]])
+  roe <- metric_num(raw[["2025年ROE"]]) / 100        # Excel 中为百分比数值（如 7.0 = 7%），转为比例
+  rd_intensity <- metric_num(raw[["研发强度"]])       # Excel 中已为比例（如 0.05 = 5%）
+  ipo_fund <- metric_num(raw[["首发募资"]])
+
+  revenue_median <- metric_safe_median(revenue)
+  profit_median <- metric_safe_median(net_profit)
+  profitable_ratio <- mean(net_profit > 0, na.rm = TRUE)
+  roe_median <- metric_safe_median(roe)
+  rd_median <- metric_safe_median(rd_intensity)
+  ipo_median <- metric_safe_median(ipo_fund)
 
   metric_make_kpis(
-    labels = c("营收中位数", "净利润中位数", "盈利公司占比", "ROE 中位数", "研发费用率中位数", "募集资金使用比例"),
+    labels = c("营收中位数", "净利润中位数", "盈利公司占比", "ROE 中位数", "研发强度中位数", "公发募资中位数"),
     values = c(
-      metric_format_number(metric_safe_median(latest$revenue_yi), 2),
-      metric_format_number(metric_safe_median(latest$net_profit_yi), 2),
+      metric_format_number(revenue_median, 2),
+      metric_format_number(profit_median, 2),
       metric_format_percent(profitable_ratio, 1),
-      metric_format_percent(metric_safe_median(latest$roe), 1),
-      metric_format_percent(metric_safe_median(latest$r_and_d_ratio), 1),
-      metric_format_percent(use_progress, 1)
+      metric_format_percent(roe_median, 1),
+      metric_format_percent(rd_median, 1),
+      metric_format_number(ipo_median, 2)
     ),
-    units = c("亿元", "亿元", "%", "%", "%", "%"),
-    changes = rep(paste0("截至 ", pair$latest_period), 6),
+    units = c("亿元", "亿元", "%", "%", "%", "亿元"),
+    changes = rep("截至 2025年年报", 6),
     statuses = c("neutral", "neutral", "positive", "positive", "positive", "positive")
   )
 }
@@ -157,7 +179,7 @@ company_geo_reference <- function() {
 
 # 用途：按省份和城市汇总上市公司数量，并自动匹配城市中心经纬度。
 # 输入来源：`dashboard_data$dim_company` 中的省份与城市字段。
-calc_company_geography <- function(data) {
+calc_company_geography <- function(data, board_filter = NULL) {
   dim_company <- metric_table(data, "dim_company")
   empty <- list(
     provinces = data.frame(hc_key = character(), province = character(), company_count = numeric(), stringsAsFactors = FALSE),
@@ -165,6 +187,12 @@ calc_company_geography <- function(data) {
     unmatched_city_count = 0L
   )
   if (!metric_has_cols(dim_company, c("company_code", "city")) || nrow(dim_company) == 0L) return(empty)
+
+  board_col <- intersect(c("board", "market", "上市板块"), names(dim_company))[[1]]
+  if (!is.null(board_filter) && !is.na(board_col)) {
+    dim_company <- dim_company[trimws(as.character(dim_company[[board_col]])) %in% board_filter, , drop = FALSE]
+    if (nrow(dim_company) == 0L) return(empty)
+  }
 
   ref <- company_geo_reference()
   city_key <- function(x) gsub("市$", "", trimws(as.character(x)))
@@ -186,14 +214,18 @@ calc_company_geography <- function(data) {
       if (file.exists(path) && requireNamespace("readxl", quietly = TRUE)) {
         raw <- as.data.frame(readxl::read_excel(path, sheet = "公司", .name_repair = "unique"), stringsAsFactors = FALSE)
         code_col <- if ("代码" %in% names(raw)) "代码" else if ("company_code" %in% names(raw)) "company_code" else NA_character_
+        board_col_raw <- intersect(c("上市板块", "板块", "board", "market"), names(raw))[[1]]
         lon_col <- intersect(c("经度", "longitude", "Longitude", "lon", "LON"), names(raw))[[1]]
         lat_col <- intersect(c("纬度", "latitude", "Latitude", "lat", "LAT"), names(raw))[[1]]
         if (!is.na(code_col) && !is.na(lon_col) && !is.na(lat_col)) {
-          coords <- raw[, c(code_col, lon_col, lat_col), drop = FALSE]
-          names(coords) <- c("company_code", "longitude", "latitude")
+          coords <- raw[, c(code_col, board_col_raw, lon_col, lat_col), drop = FALSE]
+          names(coords) <- c("company_code", "board", "longitude", "latitude")
+          if (!is.null(board_filter) && !is.na(board_col_raw)) {
+            coords <- coords[trimws(as.character(coords$board)) %in% board_filter, , drop = FALSE]
+          }
           coords$longitude <- chart_safe_number(coords$longitude)
           coords$latitude <- chart_safe_number(coords$latitude)
-          coords <- coords[is.finite(coords$longitude) & is.finite(coords$latitude), , drop = FALSE]
+          coords <- coords[is.finite(coords$longitude) & is.finite(coords$latitude), c("company_code", "longitude", "latitude"), drop = FALSE]
           if (nrow(coords) > 0L) coords else NULL
         } else NULL
       } else NULL
@@ -208,6 +240,13 @@ calc_company_geography <- function(data) {
   city_counts <- stats::aggregate(company_code ~ city_key, input, length)
   names(city_counts)[[2]] <- "company_count"
   matched <- merge(city_counts, ref$cities, by = "city_key", all.x = TRUE)
+  # 未匹配到参考城市的小城市，用输入数据中的原始城市名回填
+  input_city_map <- unique(input[, c("city_key", "city"), drop = FALSE])
+  matched$city <- ifelse(
+    is.na(matched$city) | !nzchar(matched$city),
+    input_city_map$city[match(matched$city_key, input_city_map$city_key)],
+    matched$city
+  )
   supplied_province <- stats::aggregate(province ~ city_key, input, function(x) {
     values <- x[!is.na(x) & nzchar(x)]
     if (length(values) == 0L) NA_character_ else values[[1L]]
@@ -244,10 +283,45 @@ calc_company_geography <- function(data) {
   province_counts$company_count[is.na(province_counts$company_count)] <- 0
   province_counts <- province_counts[, c("hc_key", "province", "company_count"), drop = FALSE]
 
+  # 按城市取市值最大的 2 家公司（用于 tooltip 展示代表公司）
+  city_top_companies <- NULL
+  tryCatch({
+    fact_market <- metric_table(data, "fact_market_period")
+    if (is.data.frame(fact_market) && nrow(fact_market) > 0L &&
+        all(c("company_code", "total_market_cap_yi", "period") %in% names(fact_market))) {
+      # 取最新一期市值
+      latest_period <- sort(unique(fact_market$period), decreasing = TRUE)[[1]]
+      market_latest <- fact_market[fact_market$period == latest_period, , drop = FALSE]
+      # 用 board_filter 后的公司数据合并市值
+      city_companies <- dim_company[, c("company_code", "city", "company_name"), drop = FALSE]
+      city_companies <- merge(city_companies, market_latest[, c("company_code", "total_market_cap_yi"), drop = FALSE],
+                              by = "company_code", all.x = TRUE)
+      city_companies$city_key <- city_key(city_companies$city)
+      city_companies$total_market_cap_yi <- chart_safe_number(city_companies$total_market_cap_yi)
+      # 按城市分组，取市值 top 2 公司名
+      city_top_companies <- stats::aggregate(
+        company_name ~ city_key,
+        city_companies[order(city_companies$total_market_cap_yi, decreasing = TRUE, na.last = TRUE), , drop = FALSE],
+        function(x) paste(head(x[!is.na(x) & nzchar(x)], 3), collapse = "、")
+      )
+      names(city_top_companies)[[2]] <- "top_companies"
+      # 按城市分组，取对应市值
+      has_mcap <- city_companies[is.finite(city_companies$total_market_cap_yi) & city_companies$total_market_cap_yi > 0, , drop = FALSE]
+      city_top_cap <- stats::aggregate(
+        total_market_cap_yi ~ city_key,
+        has_mcap[order(has_mcap$total_market_cap_yi, decreasing = TRUE, na.last = TRUE), , drop = FALSE],
+        function(x) paste(format(round(head(x, 3), 1), nsmall = 1, trim = TRUE), collapse = "、")
+      )
+      names(city_top_cap)[[2]] <- "top_caps"
+      city_top_companies <- merge(city_top_companies, city_top_cap, by = "city_key", all = TRUE)
+    }
+  }, error = function(e) NULL)
+
   list(
     provinces = province_counts,
     cities = matched[, c("city", "province", "longitude", "latitude", "company_count"), drop = FALSE],
-    unmatched_city_count = sum(unmatched)
+    unmatched_city_count = sum(unmatched),
+    city_top_companies = city_top_companies
   )
 }
 
@@ -292,4 +366,120 @@ calc_company_detail <- function(data) {
   detail_columns <- c("company_code", "company_name", "industry", "revenue_yi", "net_profit_yi", "roe", "r_and_d_ratio", "use_progress", "risk_tag")
   out <- out[, intersect(detail_columns, names(out)), drop = FALSE]
   out[order(metric_num(out$revenue_yi), decreasing = TRUE, na.last = TRUE), , drop = FALSE]
+}
+
+# 用途：提取北交所公司最新一期营业收入与净利润，用于营收-净利润散点图。
+# 输入来源：`dashboard_data$dim_company`、`dashboard_data$fact_financial_period`
+calc_company_revenue_profit_scatter <- function(data) {
+  dim_company <- metric_table(data, "dim_company")
+  financial <- metric_table(data, "fact_financial_period")
+  if (!metric_has_cols(dim_company, c("company_code", "company_name")) ||
+      nrow(dim_company) == 0L || nrow(financial) == 0L) {
+    return(data.frame(company_name = character(), revenue_yi = numeric(), net_profit_yi = numeric(), stringsAsFactors = FALSE))
+  }
+
+  pair <- metric_latest_financial_pair(financial)
+  if (nrow(pair$latest) == 0L) return(data.frame(company_name = character(), revenue_yi = numeric(), net_profit_yi = numeric(), stringsAsFactors = FALSE))
+
+  merged <- merge(
+    dim_company[, c("company_code", "company_name"), drop = FALSE],
+    pair$latest[, c("company_code", "revenue_yi", "net_profit_yi"), drop = FALSE],
+    by = "company_code", all.x = TRUE
+  )
+  merged$revenue_yi <- metric_num(merged$revenue_yi)
+  merged$net_profit_yi <- metric_num(merged$net_profit_yi)
+  merged <- merged[is.finite(merged$revenue_yi) & is.finite(merged$net_profit_yi), , drop = FALSE]
+  merged <- merged[order(merged$revenue_yi, decreasing = TRUE, na.last = TRUE), , drop = FALSE]
+  merged
+}
+
+# 用途：从"上市公司基本情况.xlsx"读取北交所公司财务汇总表。
+# 输入来源：`data/raw/上市公司基本情况.xlsx`
+calc_company_financial_table <- function(data) {
+  path <- "data/raw/上市公司基本情况.xlsx"
+  if (!file.exists(path) || !requireNamespace("readxl", quietly = TRUE)) {
+    return(data.frame(证券简称 = "数据不可用", check.names = FALSE))
+  }
+  raw <- tryCatch({
+    raw_df <- as.data.frame(readxl::read_excel(path, sheet = "公司", .name_repair = "unique"), stringsAsFactors = FALSE)
+    board_col <- intersect(c("上市板块", "板块", "board", "market"), names(raw_df))[[1]]
+    if (!is.na(board_col)) {
+      raw_df <- raw_df[trimws(as.character(raw_df[[board_col]])) %in% c("北证", "北交所"), , drop = FALSE]
+    }
+    raw_df
+  }, error = function(e) NULL)
+  if (is.null(raw) || nrow(raw) == 0L) {
+    return(data.frame(证券简称 = "数据不可用", check.names = FALSE))
+  }
+  out <- data.frame(
+    证券简称 = raw[["名称"]],
+    `营业收入（亿元）` = round(metric_num(raw[["2025年营业收入"]]), 1),
+    `净利润（亿元）`   = round(metric_num(raw[["2025年净利润"]]), 1),
+    `公发募资（亿元）` = round(metric_num(raw[["首发募资"]]), 1),
+    `总市值（亿元）`   = round(metric_num(raw[["总市值"]]), 1),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  out <- out[order(out[["营业收入（亿元）"]], decreasing = TRUE, na.last = TRUE), , drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
+
+# 用途：根据 2025 年营收、利润及增长率，计算北交所公司经营状态分布。
+# 输入来源：`data/raw/上市公司基本情况.xlsx` 中的 2025 年营收、净利润、25 营收增长率、24 利润增长率。
+# 输出：包含 status、count 两列的数据框，status 顺序固定。
+calc_company_operating_status_distribution <- function(raw) {
+  empty <- data.frame(
+    status = c(
+      "25年收入利润双增长",
+      "25年收入增长，但是利润下降（但利润为正）",
+      "25年收入、利润均下降（但利润为正）",
+      "25年利润亏损但亏损幅度减小",
+      "25年利润亏损且亏损幅度扩大"
+    ),
+    count = 0L,
+    stringsAsFactors = FALSE
+  )
+  if (!is.data.frame(raw) || nrow(raw) == 0L) {
+    return(empty)
+  }
+
+  revenue <- metric_num(raw[["2025年营业收入"]])
+  profit <- metric_num(raw[["2025年净利润"]])
+  revenue_growth <- metric_num(raw[["25营收增长率"]])
+  profit_growth <- metric_num(raw[["24利润增长率"]])
+
+  valid <- is.finite(revenue) & is.finite(profit) & is.finite(revenue_growth) & is.finite(profit_growth)
+  if (sum(valid) == 0L) {
+    return(empty)
+  }
+
+  status <- character(length(revenue))
+  status[] <- NA_character_
+
+  prof <- valid & profit > 0
+  loss <- valid & profit <= 0
+
+  status[prof & revenue_growth > 0 & profit_growth > 0] <- "25年收入利润双增长"
+  status[prof & revenue_growth > 0 & profit_growth <= 0] <- "25年收入增长，但是利润下降（但利润为正）"
+  status[prof & revenue_growth <= 0 & profit_growth <= 0] <- "25年收入、利润均下降（但利润为正）"
+  status[loss & profit_growth > 0] <- "25年利润亏损但亏损幅度减小"
+  status[loss & profit_growth <= 0] <- "25年利润亏损且亏损幅度扩大"
+
+  status <- status[!is.na(status)]
+  if (length(status) == 0L) {
+    return(empty)
+  }
+
+  counts <- table(status)
+  df <- as.data.frame(counts, stringsAsFactors = FALSE)
+  names(df) <- c("status", "count")
+  df$count <- as.integer(df$count)
+
+  df$status <- factor(df$status, levels = empty$status)
+  df <- merge(empty[, "status", drop = FALSE], df, by = "status", all.x = TRUE)
+  df$count[is.na(df$count)] <- 0L
+  df <- df[order(df$status), , drop = FALSE]
+  df$status <- as.character(df$status)
+  df
 }

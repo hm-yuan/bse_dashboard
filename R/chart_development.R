@@ -66,3 +66,59 @@ plot_trading_ecosystem_trend <- function(df) {
 
   chart_widget(chart |> highcharter::hc_tooltip(shared = TRUE, valueDecimals = 1))
 }
+
+# 用途：绘制三大指数走势线图（创业板指、科创50、北证50），以 2022-04-29 为基准日计算涨跌幅
+# 输入来源：`calc_index_trend()` 的输出数据框
+# Input: index trend data frame (date + 3 index columns in % change). Output: a multi-line trend chart.
+plot_index_trend <- function(df) {
+  if (!is.data.frame(df) || nrow(df) == 0L) {
+    return(chart_empty_state("暂无指数走势数据"))
+  }
+  if (!chart_has_highcharter()) {
+    return(chart_fallback_table("主要指数走势", df, "未检测到 highcharter，已显示指数数据。"))
+  }
+
+  plot_df <- df[order(df$date), , drop = FALSE]
+  categories <- as.character(plot_df$date)
+
+  chart <- chart_hc_base("spline") |>
+    highcharter::hc_xAxis(categories = categories, labels = list(style = list(fontSize = "10px"))) |>
+    highcharter::hc_yAxis(
+      title = list(text = "涨跌幅（%）"),
+      labels = list(format = "{value}%")
+    ) |>
+    highcharter::hc_add_series(
+      name = "创业板指",
+      data = chart_safe_number(plot_df[["创业板指"]]),
+      color = "#002B5B",
+      lineWidth = 2,
+      marker = list(enabled = FALSE)
+    ) |>
+    highcharter::hc_add_series(
+      name = "科创50指数",
+      data = chart_safe_number(plot_df[["科创50指数"]]),
+      color = "#EA5455",
+      lineWidth = 2,
+      marker = list(enabled = FALSE)
+    ) |>
+    highcharter::hc_add_series(
+      name = "北证50指数",
+      data = chart_safe_number(plot_df[["北证50指数"]]),
+      color = "#E8AA42",
+      lineWidth = 2,
+      marker = list(enabled = FALSE)
+    ) |>
+    highcharter::hc_tooltip(
+      shared = TRUE,
+      valueDecimals = 1,
+      valueSuffix = "%"
+    ) |>
+    highcharter::hc_legend(
+      align = "center",
+      verticalAlign = "bottom",
+      layout = "horizontal"
+    ) |>
+    highcharter::hc_credits(enabled = FALSE)
+
+  chart_widget(chart)
+}

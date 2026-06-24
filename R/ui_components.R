@@ -99,13 +99,17 @@ render_data_chart <- function(type, data = dashboard_data) {
   switch(type,
     market_bubble = plot_market_position_bubble(calc_market_position_bubble(data)),
     industry_treemap = plot_market_industry_treemap(data),
-    company_geo_map = plot_company_geography_map(calc_company_geography(data)),
+    company_geo_map = plot_company_geography_map(
+      calc_company_geography(data),
+      bse_geo = calc_company_geography(data, board_filter = c("北证", "北交所"))
+    ),
     company_heatmap = plot_company_industry_matrix(calc_company_industry_contribution(data)),
     company_quadrant = plot_company_quality_quadrant(calc_company_quality_quadrant(data)),
     listing_financing = plot_listing_financing_trend(calc_listing_financing_trend(data)),
-    trading_ecosystem = plot_trading_ecosystem_trend(calc_trading_ecosystem_trend(data)),
+    trading_ecosystem = plot_index_trend(calc_index_trend(data)),
     quality_matrix = plot_quality_status_matrix(calc_quality_status_matrix(data)),
     risk_heatmap = plot_risk_industry_heatmap(calc_risk_industry_heatmap(data)),
+    company_revenue_profit = plot_company_revenue_profit_scatter(calc_company_revenue_profit_scatter(data)),
     render_placeholder_chart(type)
   )
 }
