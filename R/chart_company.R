@@ -366,8 +366,10 @@ bse_city_color <- function(x) {
       enabled = TRUE,
       layout = "vertical",
       align = "left",
-      verticalAlign = "middle",
-      floating = TRUE,
+      verticalAlign = "top",
+      floating = FALSE,
+      x = 30,
+      itemDistance = 6,
       symbolRadius = 3,
       itemStyle = list(
         color = "#334155",

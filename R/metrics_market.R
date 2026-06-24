@@ -265,7 +265,21 @@ calc_market_position_kpis <- function(data) {
   }
 
   row <- kpi[1, , drop = FALSE]
-  as_of <- format(as.Date(row$as_of_date[[1]]), "%Y-%m-%d")
+
+  # 优先从上市公司基本情况表读取"最近交易日"
+  latest_trade_date <- tryCatch({
+    path <- "data/raw/上市公司基本情况.xlsx"
+    if (file.exists(path) && requireNamespace("readxl", quietly = TRUE)) {
+      raw <- as.data.frame(readxl::read_excel(path, sheet = "公司", .name_repair = "unique"), stringsAsFactors = FALSE)
+      date_col <- grep("最近交易日", names(raw), value = TRUE, fixed = TRUE)[[1]]
+      if (!is.na(date_col) && nrow(raw) > 0L) {
+        d <- as.Date(raw[[date_col]][[1L]])
+        if (is.finite(d)) format(d, "%Y-%m-%d") else NULL
+      }
+    }
+  }, error = function(e) NULL)
+  as_of <- if (!is.null(latest_trade_date)) latest_trade_date else format(as.Date(row$as_of_date[[1]]), "%Y-%m-%d")
+
   current_year_new <- metric_format_count(row$current_year_new_listed_count[[1]])
 
   detail <- metric_table(data, "market_position_company_detail")

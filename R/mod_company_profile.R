@@ -45,8 +45,7 @@ company_geo_map_combined_card_ui <- function(ns, block) {
         class = "company-geo-right",
         div(
           class = "company-geo-right-cell geo-geo-table-cell",
-          div(class = "geo-table-scroll geo-reactable-wrap", reactable::reactableOutput(ns("finance_table"))),
-          div(class = "geo-table-note", "单位：亿元")
+          div(class = "geo-table-scroll geo-reactable-wrap", reactable::reactableOutput(ns("finance_table")))
         )
       )
     )
@@ -321,9 +320,9 @@ companyProfileServer <- function(id) {
       reactable::reactable(
         display_df,
         searchable = TRUE,
-        defaultPageSize = 30,
+        defaultPageSize = 25,
         showPageSizeOptions = TRUE,
-        pageSizeOptions = c(10, 20, 30, 50, 100),
+        pageSizeOptions = c(10, 20, 25, 50, 100),
         onClick = "expand",
         defaultColDef = reactable::colDef(align = "center", headerClass = "geo-reactable-header"),
         columns = list(

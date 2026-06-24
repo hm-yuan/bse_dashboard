@@ -1,0 +1,10 @@
+name: bse_dashboard
+title: bse_dashboard
+username: yuanhaoming
+account: yuanhaoming
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 17541179
+bundleId: 12166683
+url: https://yuanhaoming.shinyapps.io/bse_dashboard/
+version: 1

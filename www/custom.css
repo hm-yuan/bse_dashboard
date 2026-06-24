@@ -240,8 +240,8 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   padding: 14px 16px 12px;
-  min-height: 1450px;
-  height: 1450px;
+  min-height: 1305px;
+  height: 1305px;
 }
 
 .company-geo-left {

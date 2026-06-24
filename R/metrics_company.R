@@ -436,11 +436,11 @@ calc_company_financial_table <- function(data) {
 calc_company_operating_status_distribution <- function(raw) {
   empty <- data.frame(
     status = c(
-      "25年收入利润双增长",
-      "25年收入增长，但是利润下降（但利润为正）",
-      "25年收入、利润均下降（但利润为正）",
-      "25年利润亏损但亏损幅度减小",
-      "25年利润亏损且亏损幅度扩大"
+      "经营扩张",
+      "增收不增利",
+      "经营收缩",
+      "亏损收窄",
+      "亏损扩大或由盈到亏变化"
     ),
     count = 0L,
     stringsAsFactors = FALSE
@@ -465,11 +465,11 @@ calc_company_operating_status_distribution <- function(raw) {
   prof <- valid & profit > 0
   loss <- valid & profit <= 0
 
-  status[prof & revenue_growth > 0 & profit_growth > 0] <- "25年收入利润双增长"
-  status[prof & revenue_growth > 0 & profit_growth <= 0] <- "25年收入增长，但是利润下降（但利润为正）"
-  status[prof & revenue_growth <= 0 & profit_growth <= 0] <- "25年收入、利润均下降（但利润为正）"
-  status[loss & profit_growth > 0] <- "25年利润亏损但亏损幅度减小"
-  status[loss & profit_growth <= 0] <- "25年利润亏损且亏损幅度扩大"
+  status[prof & revenue_growth > 0 & profit_growth > 0] <- "经营扩张"
+  status[prof & revenue_growth > 0 & profit_growth <= 0] <- "增收不增利"
+  status[prof & revenue_growth <= 0] <- "经营收缩"
+  status[loss & profit_growth > 0] <- "亏损收窄"
+  status[loss & profit_growth <= 0] <- "亏损扩大或由盈到亏变化"
 
   status <- status[!is.na(status)]
   if (length(status) == 0L) {
