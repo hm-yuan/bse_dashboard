@@ -619,11 +619,16 @@ calc_company_pe_market_cap_data <- function(path = "data/raw/上市公司基本�
     )
   )
 
+  pe_raw <- as.character(raw[["市盈率"]])
+  pe_raw <- gsub("Fetching\\.\\.\\.", "", pe_raw, ignore.case = TRUE)
+  pe_raw <- gsub(",", "", pe_raw)
+  pe_num <- suppressWarnings(as.numeric(pe_raw))
+
   out <- data.frame(
     company_name = as.character(raw[["名称"]]),
     board = board,
     market_cap_yi = chart_safe_number(raw[["总市值"]]),
-    pe = chart_safe_number(raw[["市盈率"]]),
+    pe = pe_num,
     stringsAsFactors = FALSE
   )
 

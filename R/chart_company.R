@@ -360,7 +360,7 @@ bse_city_color <- function(x) {
   hc |>
     highcharter::hc_mapNavigation(
       enabled = TRUE,
-      enableButtons = FALSE
+      enableButtons = TRUE
     ) |>
     highcharter::hc_legend(
       enabled = TRUE,

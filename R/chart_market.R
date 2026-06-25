@@ -179,7 +179,7 @@ chart_equal_interval_position <- function(values, breaks) {
 
 # 用途：生成等距分段轴标签，将轴坐标 0, 1, 2… 还原为原始刻度文本。
 chart_equal_interval_labels <- function(breaks) {
-  labels <- format(breaks, big.mark = ",", scientific = FALSE, trim = TRUE)
+  labels <- as.character(format(breaks, big.mark = ",", scientific = FALSE, trim = TRUE))
   highcharter::JS(sprintf(
     "function(){ var labels=%s, index=Math.round(this.value); return labels[index] || ''; }",
     jsonlite::toJSON(labels, auto_unbox = TRUE)

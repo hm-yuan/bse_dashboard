@@ -145,6 +145,19 @@ companyProfileServer <- function(id) {
     shiny::observeEvent(input$geo_reset, {
       geo_filter(NULL)
     })
+
+    # 地图返回英文省份名称，转换为 Excel 中使用的中文名称
+    province_name_map <- c(
+      "Anhui" = "安徽", "Beijing" = "北京", "Chongqing" = "重庆", "Fujian" = "福建",
+      "Gansu" = "甘肃", "Guangdong" = "广东", "Guangxi" = "广西", "Guizhou" = "贵州",
+      "Hainan" = "海南", "Hebei" = "河北", "Heilongjiang" = "黑龙江", "Henan" = "河南",
+      "Hubei" = "湖北", "Hunan" = "湖南", "Inner Mongolia" = "内蒙古", "Jiangsu" = "江苏",
+      "Jiangxi" = "江西", "Jilin" = "吉林", "Liaoning" = "辽宁", "Ningxia" = "宁夏",
+      "Qinghai" = "青海", "Shaanxi" = "陕西", "Shandong" = "山东", "Shanghai" = "上海",
+      "Shanxi" = "山西", "Sichuan" = "四川", "Taiwan" = "台湾", "Tianjin" = "天津",
+      "Xinjiang" = "新疆", "Xizang" = "西藏", "Yunnan" = "云南", "Zhejiang" = "浙江"
+    )
+
     filtered_finance_data <- shiny::reactive({
       filt <- geo_filter()
       path <- "data/raw/上市公司基本情况.xlsx"
@@ -169,6 +182,9 @@ companyProfileServer <- function(id) {
       # 按城市或省份过滤
       city_filter <- filt$city
       province_filter <- filt$province
+      if (!is.null(province_filter) && province_filter %in% names(province_name_map)) {
+        province_filter <- province_name_map[province_filter]
+      }
       if (!is.null(city_filter) && "城市" %in% names(raw)) {
         city_key <- function(x) gsub("市$", "", trimws(as.character(x)))
         matched <- city_key(raw[["城市"]]) == city_key(city_filter)
@@ -370,6 +386,9 @@ companyProfileServer <- function(id) {
 
       city_filter <- filt$city
       province_filter <- filt$province
+      if (!is.null(province_filter) && province_filter %in% names(province_name_map)) {
+        province_filter <- province_name_map[province_filter]
+      }
       if (!is.null(city_filter) && "城市" %in% names(raw)) {
         city_key <- function(x) gsub("市$", "", trimws(as.character(x)))
         matched <- city_key(raw[["城市"]]) == city_key(city_filter)

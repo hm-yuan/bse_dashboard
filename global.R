@@ -23,6 +23,18 @@ source("R/mod_market_position.R", encoding = "UTF-8")
 source("R/mod_company_profile.R", encoding = "UTF-8")
 source("R/mod_market_development.R", encoding = "UTF-8")
 source("R/mod_market_quality.R", encoding = "UTF-8")
+source("R/process_basic_data.R", encoding = "UTF-8")
+
+# 自动检测：如果 Excel 比 processed CSV 新，自动重新处理
+excel_path <- "data/raw/上市公司基本情况.xlsx"
+kpi_path   <- "data/processed/market_position_kpi.csv"
+if (file.exists(excel_path) &&
+    (!file.exists(kpi_path) || file.info(excel_path)$mtime > file.info(kpi_path)$mtime)) {
+  message("检测到 Excel 已更新，自动重新生成 processed 数据...")
+  tryCatch(process_basic_data(), error = function(e) {
+    message("自动处理失败：", e$message, "，将使用旧数据。")
+  })
+}
 
 app_theme <- bslib::bs_theme(
   version = 5,
