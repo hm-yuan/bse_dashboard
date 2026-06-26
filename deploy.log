@@ -1,0 +1,23 @@
+开始部署到 shinyapps.io...
+── Preparing for deployment ────────────────────────────────────────────────────
+✔ Re-deploying "bse_dashboard" using "server: shinyapps.io / username: yuanhaoming"
+ℹ Looking up content with id "17541179"...
+✔ Found content <https://yuanhaoming.shinyapps.io/bse_dashboard/>
+ℹ Bundling 60 files: 'AGENTS.MD', 'app.R', 'config/indicators.yml', 'config/page_blocks.yml', 'config/theme.yml', 'config/thresholds.yml', 'data/cache/bse_city_coordinates.csv', 'data/cache/china-cn-all.geo.json', 'data/cache/china_city_coordinates.csv', 'data/processed/data_quality_log.csv', 'data/processed/dim_company.csv', 'data/processed/dim_industry.csv', 'data/processed/fact_financial_period.csv', 'data/processed/fact_financing.csv', 'data/processed/fact_fundraising_use.csv', 'data/processed/fact_listing_pipeline.csv', 'data/processed/fact_market_period.csv', 'data/processed/fact_risk_tag.csv', …, 'www/logo_bse.png', and 'www/stock_mini_chart.js'
+ℹ Capturing R dependencies
+✔ Found 92 dependencies
+✔ Created bundle of size: 1,914,341b
+ℹ Uploading bundle...
+✔ Uploaded bundle with id 12184013
+── Deploying to server ─────────────────────────────────────────────────────────
+Waiting for task: 1711418168
+  building: Building image: 15144158
+  building: Installing system dependencies
+  building: Installing packages
+  building: Installing files
+  building: Pushing image: 15144158
+  deploying: Starting instances
+  terminating: Stopping old instances
+── Deployment complete ─────────────────────────────────────────────────────────
+✔ Successfully deployed to <https://yuanhaoming.shinyapps.io/bse_dashboard/>
+部署完成。
