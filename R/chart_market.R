@@ -88,9 +88,18 @@ chart_hc_base <- function(type = NULL, height = NULL) {
       backgroundColor = "transparent"
     ) |>
     highcharter::hc_credits(enabled = FALSE) |>
-    highcharter::hc_exporting(enabled = FALSE) |>
     highcharter::hc_add_dependency("highcharts-more.js") |>
     highcharter::hc_add_dependency("modules/heatmap.js") |>
+    highcharter::hc_add_dependency("modules/export-data.js") |>
+    highcharter::hc_add_dependency("modules/full-screen.js") |>
+    highcharter::hc_exporting(
+      enabled = TRUE,
+      buttons = list(
+        contextButton = list(
+          menuItems = c("viewFullscreen", "printChart", "separator", "downloadPNG", "downloadJPEG", "downloadPDF", "downloadSVG", "separator", "downloadCSV", "downloadXLS")
+        )
+      )
+    ) |>
     highcharter::hc_legend(
       itemStyle = list(color = colors$navy, fontSize = "11px", fontWeight = "500"),
       itemHoverStyle = list(color = colors$bse_blue),

@@ -357,11 +357,20 @@ bse_city_color <- function(x) {
     formatter = highcharter::JS(tooltip_formatter)
   )
 
+  # 直接设置 mapNavigation，确保放大缩小按钮生效
+  hc$x$hc_opts$mapNavigation <- list(
+    enabled = TRUE,
+    enableButtons = TRUE,
+    enableMouseWheelZoom = TRUE,
+    buttonOptions = list(
+      align = "left",
+      verticalAlign = "top",
+      x = 10,
+      y = 10
+    )
+  )
+
   hc |>
-    highcharter::hc_mapNavigation(
-      enabled = TRUE,
-      enableButtons = TRUE
-    ) |>
     highcharter::hc_legend(
       enabled = TRUE,
       layout = "vertical",
@@ -594,7 +603,7 @@ plot_company_revenue_profit_scatter <- function(df) {
     chart_widget()
 }
 
-# 用途：绘制公司经营状态圆环图。
+# 用途：绘制公司经营状态南丁格尔玫瑰图。
 # 输入来源：`calc_company_operating_status_distribution()` 的输出数据框。
 plot_company_operating_status_donut <- function(df) {
   if (!is.data.frame(df) || nrow(df) == 0L || sum(df$count, na.rm = TRUE) == 0L) {
@@ -610,35 +619,60 @@ plot_company_operating_status_donut <- function(df) {
     return(chart_empty_state("暂无经营状态数据"))
   }
 
-  pie_data <- lapply(seq_len(nrow(df)), function(i) {
-    list(name = df$status[[i]], y = df$count[[i]], color = colors[[(i - 1L) %% length(colors) + 1L]])
+  total <- sum(df$count, na.rm = TRUE)
+  rose_data <- lapply(seq_len(nrow(df)), function(i) {
+    list(
+      name = df$status[[i]],
+      y = df$count[[i]],
+      color = colors[[(i - 1L) %% length(colors) + 1L]],
+      pct = round(df$count[[i]] / total * 100, 1)
+    )
   })
 
   chart_hc_base() |>
-    highcharter::hc_chart(type = "pie", backgroundColor = "transparent") |>
+    highcharter::hc_chart(type = "column", polar = TRUE, backgroundColor = "transparent") |>
     highcharter::hc_title(text = NULL) |>
+    highcharter::hc_xAxis(
+      categories = df$status,
+      tickmarkPlacement = "on",
+      lineWidth = 0,
+      lineColor = "transparent",
+      gridLineWidth = 0,
+      tickWidth = 0,
+      title = list(text = NULL),
+      labels = list(enabled = FALSE)
+    ) |>
+    highcharter::hc_yAxis(
+      gridLineInterpolation = "polygon",
+      gridLineColor = "transparent",
+      lineWidth = 0,
+      lineColor = "transparent",
+      tickWidth = 0,
+      min = 0,
+      title = list(text = NULL),
+      labels = list(enabled = FALSE)
+    ) |>
     highcharter::hc_plotOptions(
-      pie = list(
-        innerSize = "60%",
-        startAngle = -90,
+      column = list(
+        grouping = FALSE,
+        pointPadding = 0,
+        groupPadding = 0,
         borderWidth = 1,
         borderColor = "#FFFFFF",
         dataLabels = list(
           enabled = TRUE,
-          format = "{point.name}<br>{point.percentage:.1f}%",
-          style = list(fontSize = "8px", fontWeight = "500", textOutline = "none"),
-          distance = 8
-        ),
-        showInLegend = FALSE
+          format = "{point.name}<br>{point.y}家",
+          style = list(fontSize = "10px", fontWeight = "500", textOutline = "none")
+        )
       )
     ) |>
     highcharter::hc_legend(enabled = FALSE) |>
     highcharter::hc_tooltip(
-      pointFormat = "<b>{point.name}</b><br/>公司数：{point.y} 家 ({point.percentage:.1f}%)"
+      pointFormat = "<b>{point.name}</b><br/>公司数：{point.y} 家 ({point.pct}%)"
     ) |>
     highcharter::hc_add_series(
       name = "公司数",
-      data = pie_data,
-      type = "pie"
+      data = rose_data,
+      type = "column"
     )
 }

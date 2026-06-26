@@ -2,6 +2,21 @@
 # Input: the list returned by load_dashboard_data().
 # Output: KPI data frames, chart-ready data frames, or insight character vectors.
 
+# 用途：将 Excel 中可能的完整省份名称（如“广东省”、“新疆维吾尔自治区”）
+# 统一规范为地图与参考表使用的简写名称（如“广东”、“新疆”）。
+normalize_province_name <- function(x) {
+  if (is.null(x)) return(NULL)
+  x <- trimws(as.character(x))
+  # 兼容完整名称与部分截断名称（如 CSV 中的“宁夏回族”、“广西壮族”）
+  x <- gsub("维吾尔自治区$|维吾尔$", "", x)
+  x <- gsub("回族自治区$|回族$", "", x)
+  x <- gsub("壮族自治区$|壮族$", "", x)
+  x <- gsub("自治区$", "", x)
+  x <- gsub("特别行政区$", "", x)
+  x <- gsub("省$", "", x)
+  x
+}
+
 # 用途：计算公司画像的核心 KPI 卡片数据（营收、净利润、ROE、研发强度等）
 # 输入来源：`data/raw/上市公司基本情况.xlsx` 中 2025 年年报字段
 calc_company_profile_kpis <- function(data) {
@@ -199,7 +214,7 @@ calc_company_geography <- function(data, board_filter = NULL) {
   input <- dim_company[, intersect(c("company_code", "province", "city", "longitude", "latitude"), names(dim_company)), drop = FALSE]
   if (!"province" %in% names(input)) input$province <- NA_character_
   input$city <- trimws(as.character(input$city))
-  input$province <- trimws(as.character(input$province))
+  input$province <- normalize_province_name(input$province)
   input <- input[!is.na(input$city) & nzchar(input$city) & !grepl("^=", input$city), , drop = FALSE]
   if (nrow(input) == 0L) return(empty)
 

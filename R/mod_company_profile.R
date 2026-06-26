@@ -146,7 +146,8 @@ companyProfileServer <- function(id) {
       geo_filter(NULL)
     })
 
-    # 地图返回英文省份名称，转换为 Excel 中使用的中文名称
+    # 地图可能返回英文省份名称（GeoJSON 属性）或简写中文名称（joinBy 后的数据）。
+    # 先统一转换为简写中文，后续再通过 normalize_province_name 与 Excel 中的完整名称匹配。
     province_name_map <- c(
       "Anhui" = "安徽", "Beijing" = "北京", "Chongqing" = "重庆", "Fujian" = "福建",
       "Gansu" = "甘肃", "Guangdong" = "广东", "Guangxi" = "广西", "Guizhou" = "贵州",
@@ -185,12 +186,13 @@ companyProfileServer <- function(id) {
       if (!is.null(province_filter) && province_filter %in% names(province_name_map)) {
         province_filter <- province_name_map[province_filter]
       }
+      province_filter <- normalize_province_name(province_filter)
       if (!is.null(city_filter) && "城市" %in% names(raw)) {
         city_key <- function(x) gsub("市$", "", trimws(as.character(x)))
         matched <- city_key(raw[["城市"]]) == city_key(city_filter)
         raw <- raw[matched | (trimws(as.character(raw[["城市"]])) == city_filter), , drop = FALSE]
       } else if (!is.null(province_filter) && "省份" %in% names(raw)) {
-        raw <- raw[trimws(as.character(raw[["省份"]])) == province_filter, , drop = FALSE]
+        raw <- raw[normalize_province_name(raw[["省份"]]) == province_filter, , drop = FALSE]
       }
 
       if (is.null(filt) && nrow(raw) == 0L) {
@@ -389,12 +391,13 @@ companyProfileServer <- function(id) {
       if (!is.null(province_filter) && province_filter %in% names(province_name_map)) {
         province_filter <- province_name_map[province_filter]
       }
+      province_filter <- normalize_province_name(province_filter)
       if (!is.null(city_filter) && "城市" %in% names(raw)) {
         city_key <- function(x) gsub("市$", "", trimws(as.character(x)))
         matched <- city_key(raw[["城市"]]) == city_key(city_filter)
         codes <- raw[["代码"]][matched | (trimws(as.character(raw[["城市"]])) == city_filter)]
       } else if (!is.null(province_filter) && "省份" %in% names(raw)) {
-        codes <- raw[["代码"]][trimws(as.character(raw[["省份"]])) == province_filter]
+        codes <- raw[["代码"]][normalize_province_name(raw[["省份"]]) == province_filter]
       } else {
         return(df)
       }

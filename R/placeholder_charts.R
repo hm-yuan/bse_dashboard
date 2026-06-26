@@ -19,7 +19,16 @@ placeholder_chart_base <- function(type = "line", height = NULL) {
     highcharter::hc_add_theme(chart_bloom_theme()) |>
     highcharter::hc_chart(type = type, backgroundColor = "transparent") |>
     highcharter::hc_credits(enabled = FALSE) |>
-    highcharter::hc_exporting(enabled = FALSE) |>
+    highcharter::hc_add_dependency("modules/export-data.js") |>
+    highcharter::hc_add_dependency("modules/full-screen.js") |>
+    highcharter::hc_exporting(
+      enabled = TRUE,
+      buttons = list(
+        contextButton = list(
+          menuItems = c("viewFullscreen", "printChart", "separator", "downloadPNG", "downloadJPEG", "downloadPDF", "downloadSVG", "separator", "downloadCSV", "downloadXLS")
+        )
+      )
+    ) |>
     highcharter::hc_tooltip(shared = TRUE, valueDecimals = 1) |>
     highcharter::hc_legend(align = "center", verticalAlign = "bottom", itemStyle = list(color = "#52657A", fontSize = "11px", fontWeight = "500"))
 
