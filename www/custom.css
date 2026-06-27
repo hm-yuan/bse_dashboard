@@ -1,23 +1,30 @@
 :root {
   --bse-blue: #005BAC;
-  --bse-blue-dark: #003B7A;
+  --bse-blue-dark: #002B5B;
   --bse-cyan: #00A6C8;
-  --page-bg: #F3F6FA;
+  --swiss-black: #0B2A5B;
+  --swiss-red: #E3232E;
+  --swiss-yellow: #D7ECFF;
+  --page-bg: #F3F7FC;
   --card-bg: #FFFFFF;
   --text-strong: #0B2A5B;
-  --text-main: #334155;
-  --text-muted: #64748B;
-  --border: #C9D6E6;
-  --divider: #E2E8F0;
+  --text-main: #26384D;
+  --text-muted: #65758A;
+  --border: #B7CBE2;
+  --divider: #D9E5F2;
   --success: #22A06B;
-  --warning: #D97706;
+  --warning: #C87900;
   --danger: #E3232E;
-  --radius-card: 12px;
-  --shadow-card: 0 5px 16px rgba(15, 23, 42, 0.06);
+  --radius-card: 6px;
+  --shadow-card: 0 3px 10px rgba(20, 67, 118, 0.06);
 }
 
 body {
-  background: var(--page-bg);
+  background:
+    linear-gradient(90deg, rgba(0, 91, 172, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(0, 91, 172, 0.045) 1px, transparent 1px),
+    var(--page-bg);
+  background-size: 24px 24px;
   color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
 }
@@ -33,8 +40,8 @@ body {
   top: 0;
   z-index: 1000;
   background: #FFFFFF !important;
-  border-bottom: 1px solid #D6E0EC;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  border-bottom: 2px solid #9FC0E4;
+  box-shadow: none;
 }
 
 .navbar .container-fluid {
@@ -65,9 +72,10 @@ body {
 .navbar .nav-link {
   position: relative;
   padding: 21px 16px 19px;
-  color: #475569 !important;
+  color: #2F3A45 !important;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 650;
+  letter-spacing: 0;
 }
 
 .navbar .nav-link.active,
@@ -76,14 +84,21 @@ body {
 }
 
 .navbar .nav-link.active::after {
-  display: none;
+  position: absolute;
+  right: 16px;
+  bottom: -2px;
+  left: 16px;
+  display: block;
+  height: 4px;
+  background: var(--bse-blue);
+  content: "";
 }
 
 .page-shell,
 .dashboard-sheet {
   width: 100%;
   margin: 0 auto;
-  padding: 12px 32px 36px;
+  padding: 24px 32px 40px;
 }
 
 .hero-card,
@@ -628,6 +643,17 @@ body {
   height: 100% !important;
 }
 
+.industry-distribution-card .chart-content {
+  min-height: 300px;
+  padding-top: 0;
+  padding-bottom: 4px;
+}
+
+.industry-distribution-card .chart-content > .highchart,
+.industry-distribution-card .chart-content > .html-widget {
+  min-height: 300px !important;
+}
+
 .treemap-toolbar {
   display: flex;
   align-items: center;
@@ -939,4 +965,298 @@ body {
     padding-right: 0;
     padding-bottom: 16px;
   }
+}
+
+/* Swiss Internationalism skin: strict grid, hard rules, sparse color. */
+.hero-card,
+.content-card,
+.kpi-card,
+.portrait-entry-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.hero-card {
+  grid-template-columns: minmax(120px, 0.22fr) 1fr;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border-left: 0;
+  background: #FFFFFF;
+}
+
+.hero-label {
+  display: flex;
+  align-items: center;
+  padding: 18px 20px;
+  border-right: 1px solid var(--bse-blue-dark);
+  background: var(--bse-blue-dark);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.hero-text {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+  padding: 18px 22px;
+  color: var(--swiss-black);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+.kpi-grid {
+  gap: 16px;
+}
+
+.kpi-card {
+  min-height: 116px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, #FFFFFF 0, #FFFFFF 68%, #F8F9FB 68%, #F8F9FB 100%);
+}
+
+.kpi-card::before {
+  right: auto;
+  bottom: 0;
+  width: 5px;
+  height: 100%;
+  background: var(--bse-blue);
+}
+
+.kpi-label {
+  color: #4A5563;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.kpi-value-row {
+  margin-top: 16px;
+}
+
+.kpi-value {
+  color: var(--swiss-black);
+  font-size: 31px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.kpi-unit,
+.kpi-change {
+  letter-spacing: 0;
+}
+
+.kpi-positive::before { background: var(--success); }
+.kpi-warning::before { background: var(--warning); }
+.kpi-danger::before { background: var(--danger); }
+
+.chart-card {
+  border-top: 0;
+}
+
+.card-heading {
+  min-height: 66px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  background: #FFFFFF;
+}
+
+.card-heading h3 {
+  color: var(--swiss-black);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.card-heading p {
+  margin-top: 5px;
+  color: #5D6978;
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+.chart-content {
+  padding: 12px 14px 8px;
+  background:
+    linear-gradient(90deg, rgba(0, 91, 172, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(0, 91, 172, 0.035) 1px, transparent 1px),
+    #FFFFFF;
+  background-size: 24px 24px;
+}
+
+.market-overview-panel-heading,
+.market-insight-mini-heading,
+.treemap-state {
+  color: var(--swiss-black);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.market-overview-left {
+  border-right-color: var(--border);
+}
+
+.treemap-toolbar {
+  border-bottom: 1px solid var(--divider);
+  background: #F7FAFE;
+}
+
+.treemap-action,
+.geo-reset-btn,
+.market-overview-panel-header .form-select,
+.treemap-actions .form-select {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #FFFFFF;
+  color: var(--swiss-black);
+  box-shadow: none;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.treemap-action:hover,
+.treemap-action:focus,
+.geo-reset-btn:hover,
+.geo-reset-btn:focus {
+  border-color: var(--bse-blue);
+  background: var(--bse-blue);
+  color: #FFFFFF;
+}
+
+.insight-card {
+  border-left: 3px solid var(--bse-blue);
+}
+
+.insight-item,
+.summary-item {
+  border-bottom-color: var(--divider);
+  color: #3D4856;
+}
+
+.insight-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  background: var(--bse-blue);
+  color: #FFFFFF;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.summary-dot {
+  border-radius: 0;
+  background: var(--swiss-red);
+}
+
+.detail-table {
+  border: 1px solid var(--border);
+}
+
+.detail-table th,
+.detail-table td {
+  border-bottom: 1px solid var(--divider);
+}
+
+.detail-table th {
+  border-bottom: 1px solid var(--bse-blue-dark);
+  background: var(--bse-blue-dark);
+  color: #FFFFFF;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.detail-table td {
+  color: #2F3A45;
+}
+
+.detail-table tbody tr:nth-child(even) {
+  background: #F3F5F7;
+}
+
+.status-badge {
+  border-radius: 3px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.portrait-entry-card {
+  min-height: 156px;
+  padding: 18px 18px 16px;
+  background: #FFFFFF;
+}
+
+.portrait-entry-card:hover {
+  border-color: var(--bse-blue);
+  box-shadow: inset 0 -5px 0 var(--bse-blue);
+}
+
+.portrait-entry-title {
+  color: var(--swiss-black);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.portrait-entry-action {
+  color: var(--bse-blue);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.geo-bottom-placeholder,
+.market-insight-mini-chart,
+.geo-reactable-wrap .package-detail,
+.geo-reactable-wrap .detail-perf-table th {
+  border-radius: 4px;
+  background: #F8F9FB;
+}
+
+.geo-reactable-wrap .rt-th {
+  background: var(--bse-blue-dark);
+  color: #FFFFFF;
+}
+
+.highcharts-button text {
+  font-weight: 700 !important;
+}
+
+.highcharts-button-box {
+  fill: #FFFFFF;
+  stroke: var(--border);
+}
+
+.highcharts-button-hover .highcharts-button-box {
+  fill: #F2F4F7;
+}
+
+@media (max-width: 900px) {
+  .hero-card {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-label {
+    min-height: 42px;
+    border-right: 0;
+    border-bottom: 1px solid var(--bse-blue-dark);
+  }
+}
+
+.content-card.chart-card.industry-distribution-card .chart-content {
+  min-height: 300px !important;
+  padding-top: 0;
+  padding-bottom: 4px;
+}
+
+.content-card.chart-card.industry-distribution-card .chart-content > .highchart,
+.content-card.chart-card.industry-distribution-card .chart-content > .html-widget {
+  min-height: 300px !important;
 }

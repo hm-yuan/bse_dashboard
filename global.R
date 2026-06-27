@@ -39,9 +39,9 @@ if (file.exists(excel_path) &&
 app_theme <- bslib::bs_theme(
   version = 5,
   primary = "#005BAC",
-  bg = "#F3F6FA",
+  bg = "#F3F7FC",
   fg = "#0B2A5B",
-  "border-radius" = "12px"
+  "border-radius" = "6px"
 )
 
 dashboard_data <- load_dashboard_data()

@@ -193,21 +193,21 @@ plot_company_geography_map <- function(geo, bse_geo = NULL, geo_click_input_id =
   # 北交所城市气泡颜色函数
   # 北交所城市气泡颜色函数
 # 从高到低使用：
-# >20     "#002B5B"
-# 11-20   "#CE5959"
-# 6-10    "#E49393"
-# ≤5      "#E8AA42"
+# >20     "#005BAC"
+# 11-20   "#4E95D9"
+# 6-10    "#8DBCEB"
+# ≤5      "#00A6C8"
 bse_city_color <- function(x) {
   if (is.na(x)) {
-    return("#002B5B")
+    return("#005BAC")
   } else if (x > 15) {
-    return("#CE5959")
+    return("#005BAC")
   } else if (x > 10) {
-    return("#CE5959")
+    return("#4E95D9")
   } else if (x > 5) {
-    return("#E49393")
+    return("#8DBCEB")
   } else {
-    return("#E8AA42")
+    return("#00A6C8")
   }
 }
 
@@ -222,7 +222,7 @@ bse_city_color <- function(x) {
       name = "省级公司数量",
       data = province_data,
       joinBy = c("hc-key", "hc_key"),
-      borderColor = "#002B5B",
+      borderColor = "#0B2A5B",
       borderWidth = 0.8,
       nullColor = "#F4F5F7",
       showInLegend = FALSE,
@@ -235,7 +235,7 @@ bse_city_color <- function(x) {
     highcharter::hc_colorAxis(
       min = 0,
       minColor = "#F4F5F7",
-      maxColor = "#002B5B",
+      maxColor = "#005BAC",
       labels = list(
         format = "{value} 家",
         style = list(
@@ -326,7 +326,7 @@ bse_city_color <- function(x) {
           type = "mappoint",
           name = "北交所公司数量",
           data = bse_data,
-          color = "#E8AA42",
+          color = "#00A6C8",
           showInLegend = TRUE,
           zIndex = 21,
           marker = list(
@@ -516,7 +516,7 @@ plot_company_revenue_profit_scatter <- function(df) {
       ),
       plot_lines = list(list(
   value = x_median_pos,
-  color = "#002B5B",
+  color = "#0B2A5B",
   dashStyle = "ShortDash",
   width = 1,
   zIndex = 5,
@@ -529,7 +529,7 @@ plot_company_revenue_profit_scatter <- function(df) {
     y = -52,
 
     style = list(
-      color = "#002B5B",
+      color = "#0B2A5B",
       fontSize = "10px",
       fontWeight = "600"
     )
@@ -560,14 +560,14 @@ plot_company_revenue_profit_scatter <- function(df) {
       plot_lines = list(
         list(
           value = y_zero_pos,
-          color = "#002B5B",
+          color = "#0B2A5B",
           dashStyle = "Solid",
           width = 2,
           zIndex = 5
         ),
         list(
           value = y_median_pos,
-          color = "#002B5B",
+          color = "#0B2A5B",
           dashStyle = "ShortDash",
           width = 1,
           zIndex = 5,
@@ -576,7 +576,7 @@ plot_company_revenue_profit_scatter <- function(df) {
             align = "right",
             verticalAlign = "middle",
             x = 1,
-            style = list(color = "#002B5B", fontSize = "10px", fontWeight = "600")
+            style = list(color = "#0B2A5B", fontSize = "10px", fontWeight = "600")
           )
         )
       )
@@ -584,7 +584,7 @@ plot_company_revenue_profit_scatter <- function(df) {
     highcharter::hc_add_series(
       name = "北交所公司",
       data = points,
-      color = "#CE5959",
+      color = "#005BAC",
       marker = list(
         radius = 5,
         fillOpacity = 0.7,
@@ -613,7 +613,7 @@ plot_company_operating_status_donut <- function(df) {
     return(chart_fallback_table("公司经营状态分布", df, "未检测到 highcharter"))
   }
 
-  colors <- c("#002B5B", "#CE5959", "#F9F5EB", "#9d9b9bff", "#f7904cff")
+  colors <- c("#005BAC", "#0B2A5B", "#00A6C8", "#8DBCEB", "#6F8095")
   df <- df[df$count > 0L, , drop = FALSE]
   if (nrow(df) == 0L) {
     return(chart_empty_state("暂无经营状态数据"))

@@ -90,21 +90,21 @@ plot_index_trend <- function(df) {
     highcharter::hc_add_series(
       name = "创业板指",
       data = chart_safe_number(plot_df[["创业板指"]]),
-      color = "#002B5B",
+      color = "#0B2A5B",
       lineWidth = 2,
       marker = list(enabled = FALSE)
     ) |>
     highcharter::hc_add_series(
       name = "科创50指数",
       data = chart_safe_number(plot_df[["科创50指数"]]),
-      color = "#EA5455",
+      color = "#4E95D9",
       lineWidth = 2,
       marker = list(enabled = FALSE)
     ) |>
     highcharter::hc_add_series(
       name = "北证50指数",
       data = chart_safe_number(plot_df[["北证50指数"]]),
-      color = "#E8AA42",
+      color = "#005BAC",
       lineWidth = 2,
       marker = list(enabled = FALSE)
     ) |>

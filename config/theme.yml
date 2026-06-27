@@ -1,20 +1,20 @@
 colors:
   primary: "#005BAC"
   navy: "#0B2A5B"
-  tech_blue: "#1D6FEA"
+  tech_blue: "#4E95D9"
   cyan: "#00A6C8"
   success: "#228B5C"
-  warning: "#D97706"
+  warning: "#F59E0B"
   danger: "#E3232E"
-  muted: "#64748B"
+  muted: "#65758A"
 background:
-  page: "#F3F6FA"
+  page: "#F3F7FC"
   card: "#FFFFFF"
-  soft: "#EEF4FF"
+  soft: "#EEF5FC"
 border:
-  subtle: "#C9D6E6"
+  subtle: "#B7CBE2"
 radius:
-  card: "12px"
+  card: "6px"
 shadow:
-  card: "0 5px 16px rgba(15, 23, 42, 0.06)"
+  card: "0 3px 10px rgba(20, 67, 118, 0.06)"
 font_family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif"

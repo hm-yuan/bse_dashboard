@@ -11,46 +11,62 @@ chart_has_highcharter <- function() {
 # 输入来源：无；颜色与页面视觉规范由统一主题维护。
 chart_theme_palette <- function() {
   c(
-    "#002B5B", 
-    "#EA5455",
-    "#E8AA42",
-    "#F9F5EB",
-    "#D8D8D8",
-    "#E49393",
-    "#408E91",
-    "#245953",
-    "#89375F",
-    "#CE5959",
-    "#BACDDB",
-   "#F3E8FF"
+    "#005BAC",
+    "#0B2A5B",
+    "#00A6C8",
+    "#4E95D9",
+    "#8DBCEB",
+    "#BFD6EF",
+    "#6F8095",
+    "#22A06B",
+    "#F59E0B",
+    "#E3232E",
+    "#D7ECFF",
+    "#EEF5FC"
   )
 }
 
 # 用途：生成所有 Highcharter 图表共用的 economist 合并主题。
 # 输入来源：`chart_theme_palette()` 定义的项目图表色板。
 chart_bloom_theme <- function() {
-  highcharter::hc_theme_merge(
-    highcharter::hc_theme_economist(),
-    highcharter::hc_theme(colors = chart_theme_palette())
+  highcharter::hc_theme(
+    colors = chart_theme_palette(),
+    chart = list(
+      backgroundColor = "transparent"
+    ),
+    title = list(style = list(color = "#0B2A5B", fontWeight = "700")),
+    subtitle = list(style = list(color = "#65758A")),
+    legend = list(itemStyle = list(color = "#26384D", fontWeight = "600")),
+    xAxis = list(
+      lineColor = "#B7CBE2",
+      tickColor = "#B7CBE2",
+      gridLineColor = "#E8F0F8",
+      labels = list(style = list(color = "#65758A"))
+    ),
+    yAxis = list(
+      lineColor = "#B7CBE2",
+      tickColor = "#B7CBE2",
+      gridLineColor = "#E8F0F8",
+      labels = list(style = list(color = "#65758A"))
+    )
   )
 }
 
 # 用途：返回图表配色方案（BSE 品牌色及辅助色）。
 # 输入来源：无，函数内部定义的常量颜色值。
 chart_colors <- function() {
-  palette <- chart_theme_palette()
   list(
-    bse_blue = palette[[8]],
-    bse_blue_soft = palette[[6]],
-    bse_cyan = palette[[7]],
-    navy = palette[[8]],
-    slate = palette[[5]],
-    grid = "#E6EDF5",
-    success = palette[[8]],
-    warning = palette[[3]],
-    danger = palette[[1]],
-    risk_orange = palette[[2]],
-    risk_light = palette[[4]]
+    bse_blue = "#005BAC",
+    bse_blue_soft = "#8DBCEB",
+    bse_cyan = "#00A6C8",
+    navy = "#0B2A5B",
+    slate = "#6F8095",
+    grid = "#E8F0F8",
+    success = "#22A06B",
+    warning = "#F59E0B",
+    danger = "#E3232E",
+    risk_orange = "#F59E0B",
+    risk_light = "#FFF3D0"
   )
 }
 
@@ -107,7 +123,7 @@ chart_hc_base <- function(type = NULL, height = NULL) {
     ) |>
     highcharter::hc_tooltip(
       backgroundColor = "#FFFFFF",
-      borderColor = "#C9D8E8",
+      borderColor = "#B7CBE2",
       borderRadius = 4,
       shadow = FALSE,
       style = list(color = colors$navy, fontSize = "12px")
@@ -210,9 +226,9 @@ plot_market_position_bubble <- function(df) {
 
   # 用途：为各市场指定固定顺序与配色，与市场板块成交统计图保持一致。
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#f7904cff")
+  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#005BAC")
   names(board_palette) <- board_order
-  # 调色盘 c("#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#f7904cff")
+  # 调色盘采用现代蓝色为主，北交所使用品牌蓝高亮。
   # 气泡图数据中的市场名称与板块配色名称略有差异，建立映射关系。
   market_to_board <- c(
     "沪市主板" = "上证主板",
@@ -296,9 +312,9 @@ plot_company_pe_market_cap_scatter <- function(df) {
   }
 
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#002B5B", "#CE5959", "#9d9b9bff", "#9d9b9bff", "#f7904cff")
+  board_palette <- c("#0B2A5B", "#4E95D9", "#6F8095", "#BFD6EF", "#005BAC")
   names(board_palette) <- board_order
-  # 调色盘 c("#002B5B", "#CE5959", "#F9F5EB", "#9d9b9bff", "#f7904cff")
+  # 调色盘采用现代蓝色为主，北交所使用品牌蓝高亮。
 
   df$board <- factor(df$board, levels = board_order)
   df <- df[df$board %in% board_order, , drop = FALSE]
@@ -428,10 +444,10 @@ plot_enterprise_nature_bar <- function(df) {
   boards <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
   natures <- c("国有企业", "民营企业", "外资企业", "公众企业")
   nature_colors <- c(
-    "国有企业" = "#002B5B",
-    "民营企业" = "#CE5959",
+    "国有企业" = "#0B2A5B",
+    "民营企业" = "#005BAC",
     "外资企业" = "#D8D8D8",
-    "公众企业" = "#E8AA42"
+    "公众企业" = "#00A6C8"
   )
 
   hc <- chart_hc_base("column") |>
@@ -510,13 +526,13 @@ plot_bse_rd_intensity_indicator <- function(ratio) {
     highcharter::hc_add_series(
       name = "研发强度 > 5%",
       type = "bar",
-      color = "#002B5B",
+      color = "#0B2A5B",
       data = list(round(ratio * 100, 1))
     ) |>
     highcharter::hc_add_series(
       name = "其他",
       type = "bar",
-      color = "#CE5959",
+      color = "#005BAC",
       data = list(round((1 - ratio) * 100, 1))
     )
 
@@ -549,13 +565,13 @@ plot_bse_specialized_new_indicator <- function(count) {
   other <- max(total - count, 0L)
   pct <- if (total > 0L) round(count / total * 100, 1) else 0
   pie_data <- list(
-    list(name = "国家级专精特新", y = count, color = "#002B5B"),
-    list(name = "其他", y = other, color = "#CE5959")
+    list(name = "国家级专精特新", y = count, color = "#005BAC"),
+    list(name = "其他", y = other, color = "#BFD6EF")
   )
 
   title_html <- paste0(
-    "<span style='font-size:22px;font-weight:700;color:#002B5B'>", pct,
-    "</span><span style='font-size:14px;font-weight:600;color:#002B5B'>%</span><br/><span style='font-size:10px;color:#6B7280'>国家级专精特新</span>"
+    "<span style='font-size:22px;font-weight:700;color:#005BAC'>", pct,
+    "</span><span style='font-size:14px;font-weight:600;color:#005BAC'>%</span><br/><span style='font-size:10px;color:#6B7280'>国家级专精特新</span>"
   )
 
   hc <- chart_hc_base("pie", height = 120) |>
@@ -648,9 +664,9 @@ plot_market_industry_treemap <- function(data) {
 
   has_detail <- metric_has_cols(detail, c("company_name", "industry", "total_market_cap_yi"))
 
-  # 行业父节点：按行业市值排名使用 #002B5B 连续深浅蓝色渐变
+  # 行业父节点：按行业市值排名使用品牌蓝连续深浅渐变
   n_industries <- max(nrow(plot_df), 2L)
-  industry_palette <- grDevices::colorRampPalette(c("#002B5B", "#8DBBEA"))(n_industries)
+  industry_palette <- grDevices::colorRampPalette(c("#005BAC", "#D7ECFF"))(n_industries)
 
   build_parent_nodes <- function(size_by = "count") {
     lapply(seq_len(nrow(plot_df)), function(i) {
@@ -670,7 +686,7 @@ plot_market_industry_treemap <- function(data) {
     })
   }
 
-  # 公司叶子节点：按公司市值排名使用 #002B5B 连续深浅蓝色渐变
+  # 公司叶子节点：按公司市值排名使用品牌蓝连续深浅渐变
   build_company_nodes <- function(size_by = "count") {
     if (!has_detail) return(list())
     company_df <- detail[detail$industry %in% plot_df$industry, , drop = FALSE]
@@ -679,7 +695,7 @@ plot_market_industry_treemap <- function(data) {
     company_df$industry_id <- paste0("industry_", match(company_df$industry, plot_df$industry))
 
     n_companies <- max(nrow(company_df), 2L)
-    company_palette <- grDevices::colorRampPalette(c("#002B5B", "#8DBBEA"))(n_companies)
+    company_palette <- grDevices::colorRampPalette(c("#005BAC", "#D7ECFF"))(n_companies)
 
     lapply(seq_len(nrow(company_df)), function(i) {
       cap <- chart_safe_number(company_df$total_market_cap_yi[[i]])
@@ -876,7 +892,7 @@ plot_market_industry_treemap_drill <- function(data,
       other_row$market_cap_share <- sum(chart_safe_number(other_rows$market_cap_share), na.rm = TRUE)
       plot_df <- rbind(plot_df, other_row)
     }
-    palette <- grDevices::colorRampPalette(c("#002B5B", "#8DBBEA"))(nrow(plot_df))
+    palette <- grDevices::colorRampPalette(c("#005BAC", "#D7ECFF"))(nrow(plot_df))
     points <- lapply(seq_len(nrow(plot_df)), function(i) {
       list(
         name = as.character(plot_df$industry[[i]]),
@@ -918,7 +934,7 @@ plot_market_industry_treemap_drill <- function(data,
   }
 
   company_df <- company_df[order(chart_safe_number(company_df$total_market_cap_yi), decreasing = TRUE, na.last = TRUE), , drop = FALSE]
-  palette <- grDevices::colorRampPalette(c("#002B5B", "#8DBBEA"))(nrow(company_df))
+  palette <- grDevices::colorRampPalette(c("#005BAC", "#D7ECFF"))(nrow(company_df))
   points <- lapply(seq_len(nrow(company_df)), function(i) {
     list(
       name = as.character(company_df$company_name[[i]]),
@@ -951,7 +967,7 @@ plot_board_trading <- function(metric = c("turnover_amount_yi", "avg_daily_turno
   }
 
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#E8AA42")
+  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#005BAC")
   names(board_palette) <- board_order
 
   df$year <- format(df$date, "%Y")
@@ -1015,7 +1031,7 @@ plot_board_daily_turnover_area <- function() {
   }
 
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#002B5B", "#CE5959",  "#F9F5EB", "#D8D8D8", "#f7904cff")
+  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#005BAC")
   names(board_palette) <- board_order
 
   df <- df[!is.na(df$avg_daily_turnover_yi) & df$avg_daily_turnover_yi >= 0, , drop = FALSE]
@@ -1076,7 +1092,7 @@ plot_board_daily_turnover_area <- function() {
 # 用途：绘制各市场行业分布情况半圆点阵图（Highcharts item chart）。
 #       为控制渲染点数，每个点代表若干家公司/亿元市值，tooltip 显示真实数量。
 # 输入来源：`calc_market_industry_distribution()` 返回的行业数值数据框。
-plot_market_industry_distribution <- function(df, metric = "company_count", max_dots = 200L) {
+plot_market_industry_distribution <- function(df, metric = "company_count", max_dots = 260L) {
   required <- c("industry", "value", "unit_label", "share")
   if (!is.data.frame(df) || nrow(df) == 0L || !all(required %in% names(df))) {
     return(chart_empty_state("暂无行业分布数据"))
@@ -1095,8 +1111,8 @@ plot_market_industry_distribution <- function(df, metric = "company_count", max_
   display_unit <- if (use_market_cap) "万亿" else unit_label
   n <- nrow(df)
   palette <- c(
-    "#002B5B", "#EA5455", "#E8AA42", "#F9F5EB", "#D8D8D8",
-    "#E49393", "#408E91", "#245953", "#89375F"
+    "#005BAC", "#0B2A5B", "#00A6C8", "#4E95D9", "#8DBCEB",
+    "#BFD6EF", "#6F8095", "#22A06B", "#F59E0B"
   )[seq_len(n)]
 
   data <- lapply(seq_len(n), function(i) {
@@ -1116,16 +1132,28 @@ plot_market_industry_distribution <- function(df, metric = "company_count", max_
 
   chart_hc_base(NULL) |>
     highcharter::hc_add_dependency("modules/item-series.js") |>
-    highcharter::hc_chart(type = "item") |>
+    highcharter::hc_chart(
+      type = "item",
+      margin = c(0, 24, 0, 24),
+      spacing = c(0, 0, 0, 0)
+    ) |>
     highcharter::hc_plotOptions(
       item = list(
-        startAngle = -90,
-        endAngle = 90,
-        rows = 7,
+        startAngle = -100,
+        endAngle = 100,
+        center = c("50%", "68%"),
+        size = "118%",
+        rows = 10,
         layout = "horizontal",
-        itemPadding = 0.02,
+        itemPadding = 0.012,
         marker = list(symbol = "circle"),
-        dataLabels = list(enabled = TRUE, format = paste0("{point.name} {point.actual:,.", value_decimals, "f} ", display_unit))
+        dataLabels = list(
+          enabled = TRUE,
+          crop = FALSE,
+          overflow = "allow",
+          format = paste0("{point.name} {point.actual:,.", value_decimals, "f} ", display_unit),
+          style = list(color = "#0B2A5B", fontSize = "11px", fontWeight = "650", textOutline = "none")
+        )
       )
     ) |>
     highcharter::hc_legend(enabled = FALSE) |>
@@ -1140,8 +1168,8 @@ plot_market_industry_distribution <- function(df, metric = "company_count", max_
 }
 
 # 用途：绘制北交所历年公司上市数量堆叠柱状图。
-#       存量部分（下半部分）使用 #002B5B 蓝色斜条纹填充；
-#       新增部分（上半部分）为实心填充颜色 #CE5959。
+#       存量部分（下半部分）使用深蓝斜条纹填充；
+#       新增部分（上半部分）为品牌蓝实心填充。
 # 输入来源：`df` 参数为 calc_bse_annual_listing() 返回的 data.frame(year, cumulative, new)
 plot_bse_annual_listing_bar <- function(df) {
   if (!is.data.frame(df) || nrow(df) == 0L) {
@@ -1157,7 +1185,7 @@ plot_bse_annual_listing_bar <- function(df) {
     pattern = list(
       path = list(
         d = "M 0 0 L 10 10 M 9 -1 L 11 1 M -1 9 L 1 11",
-        stroke = "#002B5B",
+        stroke = "#0B2A5B",
         strokeWidth = 1.5,
         opacity = 0.6
       ),
@@ -1178,7 +1206,7 @@ plot_bse_annual_listing_bar <- function(df) {
         groupPadding = 0.05
       )
     ) |>
-    highcharter::hc_colors(c("#CE5959")) |>
+    highcharter::hc_colors(c("#005BAC")) |>
     highcharter::hc_tooltip(
       shared = TRUE,
       headerFormat = "<b>{point.key} 年</b><br/>",
@@ -1194,7 +1222,7 @@ plot_bse_annual_listing_bar <- function(df) {
       type = "column",
       name = "新增上市",
       data = df$new,
-      borderColor = "#CE5959",
+      borderColor = "#005BAC",
       borderWidth = 1.2
     ) |>
     highcharter::hc_add_series(
@@ -1202,15 +1230,15 @@ plot_bse_annual_listing_bar <- function(df) {
       name = "存量企业",
       data = df$cumulative,
       color = hs_stripe,
-      borderColor = "#002B5B",
+      borderColor = "#0B2A5B",
       borderWidth = 1.2
     )
 }
 
 # 用途：绘制各板块上市公司市值区间分布堆叠柱状图。
 #       100% 堆叠，横轴为板块，纵轴为百分比，不同颜色代表市值区间。
-#       调色盘：<50亿 #002B5B, 50-100亿 #CE5959, 100-300亿 #9d9b9bff,
-#               300-1000亿 #9d9b9bff, 1000亿以上 #f7904cff
+#       调色盘：采用蓝色层次表达不同市值区间，
+#               300-1000亿浅蓝，1000亿以上青色
 # 输入来源：`df` 参数为 calc_market_cap_distribution() 返回的 data.frame
 plot_market_cap_distribution_bar <- function(df) {
   if (!is.data.frame(df) || nrow(df) == 0L) {
@@ -1222,7 +1250,7 @@ plot_market_cap_distribution_bar <- function(df) {
 
   boards <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
   buckets <- c("<50亿", "50-100亿", "100-300亿", "300-1000亿", "1000亿以上")
-  palette <- c( "#002B5B", "#CE5959", "#F9F5EB", "#D8D8D8", "#E8AA42")
+  palette <- c("#0B2A5B", "#005BAC", "#4E95D9", "#8DBCEB", "#00A6C8")
 
   hc <- chart_hc_base("column") |>
     hc_x_axis("", categories = boards) |>
