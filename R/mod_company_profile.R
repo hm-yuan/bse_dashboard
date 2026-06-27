@@ -11,7 +11,7 @@ company_profile_chart_block <- function(type) {
 # 输入来源：`ns` 命名空间函数，`block` 页面内容块配置。
 company_geo_map_combined_card_ui <- function(ns, block) {
   div(
-    class = "content-card chart-card company-geo-combined-card",
+    class = "content-card swiss-card swiss-chart-card chart-card company-geo-combined-card",
     card_heading(block$title, block$note),
     div(
       class = "chart-content company-geo-combined-content",
@@ -62,8 +62,8 @@ companyProfileUI <- function(id) {
   geo_map_combined <- if (!is.null(map_block)) company_geo_map_combined_card_ui(ns, map_block)
 
   dashboard_sheet(
-    class = "portrait-page company-profile-page",
-    hero_card(model$judgment),
+    class = "swiss-page portrait-page company-profile-page page-company_profile",
+    swiss_page_header(model),
     kpi_grid(model$kpis),
     dashboard_grid(
       class = "chart-grid company-profile-main-grid",

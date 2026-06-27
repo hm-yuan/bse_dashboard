@@ -63,7 +63,8 @@
 * [x] 统一 Insight Card
 * [x] 统一明细表样式
 * [x] 优化 `www/custom.css`
-* [x] 落实 Fluent Light + Carbon Edge + BSE Brand 视觉系统
+* [x] 建立现代蓝色主基调 + 瑞士国际主义数据分析风格视觉系统
+* [x] 将视觉规范调整为现代蓝色主基调 + 瑞士国际主义数据分析风格
 * [x] 增加 BSE 官方 LOGO 导航
 * [x] 增加 KPI 翻牌动画
 * [x] 增加图表宽度修正脚本

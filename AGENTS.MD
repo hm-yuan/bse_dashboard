@@ -29,7 +29,7 @@ Dashboard 的主线是：
 
 * `PROJECT_BRIEF.MD`：理解当前页面叙事、已实现图表和后续页面边界。
 * `ROADMAP.MD`：理解当前开发阶段和任务优先级。
-* `UI_STYLE_GUIDE.MD`：理解视觉风格、布局规则和组件规范；进行 UI 修改前必须阅读该文件，并严格遵守 Fluent Light + Carbon Edge + BSE Brand 视觉规范和 Ant Design Pro 页面组织方式。
+* `UI_STYLE_GUIDE.MD`：理解视觉风格、布局规则和组件规范；进行 UI 修改前必须阅读该文件，并严格遵守“现代蓝色主基调 + 瑞士国际主义数据分析风格”的唯一视觉规范。
 
 进行任何数据导入、清洗、字段调整或 processed 表生成任务前，必须先阅读：
 
@@ -70,7 +70,7 @@ bse_dashboard/
 ├─ AGENTS.MD                     # Codex 协作和工程约定
 ├─ PROJECT_BRIEF.MD              # 项目背景、页面叙事和当前实现说明
 ├─ ROADMAP.MD                    # 阶段路线图
-├─ UI_STYLE_GUIDE.MD             # Fluent Light + Carbon Edge + BSE Brand 视觉规范
+├─ UI_STYLE_GUIDE.MD             # 现代蓝色主基调 + 瑞士国际主义数据分析风格视觉规范
 ├─ README.md                     # 安装依赖、运行方式和当前功能说明
 ├─ docs/
 │  └─ DATA_PROCESSING.md         # 数据处理口径、字段、质量日志和维护规则
@@ -121,7 +121,7 @@ bse_dashboard/
 4. 页面 module 只负责页面布局、组件调用和轻量交互；不要在页面 module 中直接写复杂指标计算。
 5. 通用 UI 组件写入 `R/ui_components.R`。KPI Card、Chart Card、Insight Card、Detail Card、Status Badge、布局容器和 `page_model_ui()` 等可复用组件优先在这里封装。
 6. 全局样式集中写入 `www/custom.css`。不要在 R 文件中散落大量 `style = ""`；少量局部差异通过 class 控制。
-7. UI 修改前必须阅读 `UI_STYLE_GUIDE.MD`，并遵守 Fluent Light + Carbon Edge + BSE Brand 视觉规范。导航、卡片、表格、状态标签等通用样式应优先复用既有 class。
+7. UI 修改前必须阅读 `UI_STYLE_GUIDE.MD`，并遵守其中的现代蓝色主基调、瑞士国际主义网格、强字体层级、hairline 细线和克制蓝色锚点规范。`UI_STYLE_GUIDE.MD` 是唯一视觉规范文件，不新增 `DESIGN_TARGET.md`，除非用户明确要求。
 8. 页面内容结构优先维护在 `config/page_blocks.yml`；指标名称同步维护在 `config/indicators.yml`。
 9. 数据读取统一通过 `R/data_access.R` 暴露入口，例如 `load_dashboard_data()`；页面模块不得直接读取 `data/processed/`。当前公司画像存在少量为了地理联动和展开明细读取 `data/raw/上市公司基本情况.xlsx`、`data/raw/北证A股近期走势.xlsx` 的过渡逻辑，后续应逐步迁移到 processed 和指标层。
 10. 清洗、标准化和衍生字段处理写入 `R/data_prepare.R` 或 `R/process_basic_data.R`；不要混入页面 module 或图表函数。

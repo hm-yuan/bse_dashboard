@@ -28,7 +28,7 @@ Dashboard 的叙事主线是：
 当前 App 已实现：
 
 * 四个画像页面导航：市场定位、公司画像、市场生态、市场质量画像。
-* Fluent Light + Carbon Edge + BSE Brand 视觉系统。
+* 现代蓝色主基调 + 瑞士国际主义数据分析风格视觉系统。
 * `semantic` / `placeholder` 两套页面模型。
 * processed 标准表读取、演示表补齐、基础真实数据处理和质量日志。
 * Highcharter 主图体系、reactable 公司明细表和若干前端辅助脚本。
