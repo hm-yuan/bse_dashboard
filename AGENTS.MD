@@ -6,168 +6,241 @@ BSE-Dashboard
 
 ## 项目目标
 
-本项目用于搭建一个面向对外展示和内部演示的交易所画像 dashboard。
+本项目用于搭建一个面向对外展示和内部演示的交易所画像 Dashboard。
 
-第一版目标是形成高质量、可讲述、可交互的 R Shiny 原型，不追求完整生产级业务系统。
+当前目标不是完整生产级业务系统，而是形成高质量、可讲述、可交互、可继续接入真实数据的 R Shiny 原型。
 
 Dashboard 的主线是：
 
-看定位 → 看公司 → 看发展 → 看质量。
+看定位 -> 看公司 -> 看发展 -> 看质量。
+
+当前 App 已挂载四个画像页面：
+
+1. 市场定位
+2. 公司画像
+3. 市场生态
+4. 市场质量画像
+
+`config/page_blocks.yml` 和页面模型中保留了“首页总览”定义，但 `app.R` 当前未挂载首页导航。后续如恢复首页，应新增或恢复 `R/mod_home.R`，并在 `app.R` 中注册首页 UI 和 server。
 
 ## Codex 工作规则
 
 在开始较大开发任务前，请先阅读：
 
-* PROJECT_BRIEF.md：理解项目背景、页面逻辑和指标体系
-* ROADMAP.md：理解当前开发阶段和任务优先级
-* UI_STYLE_GUIDE.md：理解视觉风格、布局规则和组件规范；进行 UI 修改前必须阅读 UI_STYLE_GUIDE.md，并严格遵守其中的 Fluent Light + Carbon Edge + BSE Brand 视觉规范和 Ant Design Pro 页面组织方式
+* `PROJECT_BRIEF.MD`：理解当前页面叙事、已实现图表和后续页面边界。
+* `ROADMAP.MD`：理解当前开发阶段和任务优先级。
+* `UI_STYLE_GUIDE.MD`：理解视觉风格、布局规则和组件规范；进行 UI 修改前必须阅读该文件，并严格遵守 Fluent Light + Carbon Edge + BSE Brand 视觉规范和 Ant Design Pro 页面组织方式。
+
+进行任何数据导入、清洗、字段调整或 processed 表生成任务前，必须先阅读：
+
+* `docs/DATA_PROCESSING.md`
 
 ## 技术路线
 
-第一版采用 R Shiny 工程化架构。
+第一版采用 R Shiny 工程化架构，不要擅自切换到 React、Next.js、FastAPI 等架构。
 
-主要技术栈：
+当前主要技术栈：
 
 * R Shiny
 * bslib
 * htmltools
-* highcharter（主图优先）
-* reactable 或 DT
-* tidyverse
-* data.table
-* duckdb
-* arrow / parquet
+* highcharter
+* reactable
+* readxl
 * yaml
-* Quarto，可选，用于后续报告导出
+* jsonlite
+* htmlwidgets
 
-不要擅自切换到 React、Next.js、FastAPI 等架构。
-如果确需引入新技术，必须先说明原因和影响。
+后续可按需引入：
 
-## 项目结构要求
+* tidyverse / data.table：用于更复杂的数据加工。
+* duckdb / arrow / parquet：用于更大规模 processed 数据。
+* Quarto：用于后续报告导出。
 
-不要采用单文件 app.R 写法。当前项目已采用模块化 Shiny 骨架，后续开发应在现有结构上增量扩展，不要把页面、指标、图表和数据逻辑重新堆回 app.R。
+新增依赖必须同步更新 `README.md`，并说明用途。不要为了单个视觉或占位效果引入重型依赖。
 
-当前结构：
+## 当前项目结构
+
+不要采用单文件 `app.R` 写法。当前项目已采用模块化 Shiny 骨架，后续开发应在现有结构上增量扩展，不要把页面、指标、图表和数据逻辑重新堆回 `app.R`。
 
 ```text
 bse_dashboard/
-├─ app.R                         # Shiny 应用入口，只负责装配主题、导航、UI 和 server
-├─ global.R                      # 全局依赖、模块 source、主题对象、演示数据加载
-├─ AGENTS.md                     # Codex 协作和工程约定
-├─ PROJECT_BRIEF.md              # 项目背景、页面叙事和指标体系
-├─ ROADMAP.md                    # 阶段路线图
-├─ UI_STYLE_GUIDE.md             # Fluent Light + Carbon Edge + BSE Brand 视觉规范
-├─ README.md                     # 安装依赖和运行方式
+├─ app.R                         # Shiny 应用入口；当前装配四个画像页导航
+├─ global.R                      # source 依赖、主题、数据对象和页面模型初始化
+├─ AGENTS.MD                     # Codex 协作和工程约定
+├─ PROJECT_BRIEF.MD              # 项目背景、页面叙事和当前实现说明
+├─ ROADMAP.MD                    # 阶段路线图
+├─ UI_STYLE_GUIDE.MD             # Fluent Light + Carbon Edge + BSE Brand 视觉规范
+├─ README.md                     # 安装依赖、运行方式和当前功能说明
 ├─ docs/
 │  └─ DATA_PROCESSING.md         # 数据处理口径、字段、质量日志和维护规则
 ├─ config/
-│  ├─ indicators.yml             # 页面指标清单和后续指标配置入口
+│  ├─ indicators.yml             # 页面指标清单
+│  ├─ page_blocks.yml            # 页面模型、KPI、主图和表格配置
 │  ├─ thresholds.yml             # 风险、质量、状态阈值配置
 │  └─ theme.yml                  # 主题 token 配置参考
 ├─ R/
-│  ├─ data_access.R              # 数据读取统一入口，当前调用演示数据，后续切换真实数据
-│  ├─ process_basic_data.R       # 基础真实数据处理入口，生成 processed 标准表和质量日志
+│  ├─ data_access.R              # processed 数据读取统一入口
+│  ├─ data_prepare.R             # 标准演示数据补齐入口
+│  ├─ process_basic_data.R       # 基础真实数据处理入口
 │  ├─ sample_data.R              # 最小可运行模拟数据
-│  ├─ ui_components.R            # 通用 UI 组件，如 KPI、Chart、Insight、Detail、Badge
-│  ├─ mod_home.R                 # 首页总览 Shiny module
-│  ├─ mod_market_position.R      # 市场定位 Shiny module
-│  ├─ mod_company_profile.R      # 公司画像 Shiny module
-│  ├─ mod_market_development.R   # 市场生态 Shiny module
-│  └─ mod_market_quality.R       # 市场质量画像 Shiny module
+│  ├─ placeholder_data.R         # placeholder 页面模型
+│  ├─ semantic_data.R            # semantic 页面模型
+│  ├─ ui_components.R            # 通用 UI 组件
+│  ├─ metrics_market.R
+│  ├─ metrics_company.R
+│  ├─ metrics_development.R
+│  ├─ metrics_quality.R
+│  ├─ chart_market.R
+│  ├─ chart_company.R
+│  ├─ chart_development.R
+│  ├─ chart_quality.R
+│  ├─ placeholder_charts.R
+│  ├─ mod_market_position.R
+│  ├─ mod_company_profile.R
+│  ├─ mod_market_development.R
+│  └─ mod_market_quality.R
 ├─ data/
 │  ├─ raw/                       # 原始真实数据落地区，保持只读和可追溯
-│  ├─ processed/                 # 清洗后的标准化数据，建议 parquet/duckdb
-│  └─ cache/                     # 可再生成的缓存数据，不作为事实来源
+│  ├─ processed/                 # 清洗后的标准化 CSV
+│  └─ cache/                     # 可再生成的地图与坐标缓存
 ├─ www/
-│  ├─ custom.css                 # 全局样式，所有通用视觉优先写在这里
-│  └─ logo_bse.png               # 北京证券交易所 LOGO
+│  ├─ custom.css                 # 全局样式
+│  ├─ logo_bse.png               # 北京证券交易所 LOGO
+│  ├─ force_chart_width.js       # 图表宽度修正
+│  ├─ kpi_flip.js                # KPI 翻牌动画
+│  └─ stock_mini_chart.js        # 公司详情小型走势辅助脚本
 └─ reports/                      # 后续报告导出模板和结果
-```
-
-后续真实数据、指标和图表接入时，可按需新增以下文件，但不要提前空转式过度工程化：
-
-```text
-R/data_prepare.R
-R/process_basic_data.R
-R/metrics_market.R
-R/metrics_company.R
-R/metrics_development.R
-R/metrics_quality.R
-R/chart_market.R
-R/chart_company.R
-R/chart_development.R
-R/chart_quality.R
-reports/export_template.qmd
 ```
 
 ## 代码组织规则
 
 1. `app.R` 只负责应用装配：主题、导航、页面 module UI 和 server 注册；不要在 `app.R` 中写业务指标、图表绘制或数据清洗逻辑。
-2. `global.R` 负责加载依赖、source R 文件、创建主题对象和初始化数据对象；不要在 `global.R` 中堆复杂业务计算。
-3. 页面 UI 和 server 逻辑写入对应的 Shiny module：`R/mod_home.R`、`R/mod_market_position.R`、`R/mod_company_profile.R`、`R/mod_market_development.R`、`R/mod_market_quality.R`。
+2. `global.R` 负责加载依赖、source R 文件、创建主题对象、初始化 `dashboard_data` 和 `dashboard_page_models`；不要在 `global.R` 中堆复杂业务计算。
+3. 页面 UI 和 server 逻辑写入对应的 Shiny module：`R/mod_market_position.R`、`R/mod_company_profile.R`、`R/mod_market_development.R`、`R/mod_market_quality.R`。如恢复首页，再新增或恢复 `R/mod_home.R`。
 4. 页面 module 只负责页面布局、组件调用和轻量交互；不要在页面 module 中直接写复杂指标计算。
-5. 通用 UI 组件写入 `R/ui_components.R`。KPI Card、Chart Card、Insight Card、Detail Card、Status Badge、布局容器等可复用组件优先在这里封装。
+5. 通用 UI 组件写入 `R/ui_components.R`。KPI Card、Chart Card、Insight Card、Detail Card、Status Badge、布局容器和 `page_model_ui()` 等可复用组件优先在这里封装。
 6. 全局样式集中写入 `www/custom.css`。不要在 R 文件中散落大量 `style = ""`；少量局部差异通过 class 控制。
-7. UI 修改前必须阅读 `UI_STYLE_GUIDE.md`，并遵守 Fluent Light + Carbon Edge + BSE Brand 视觉规范。导航、卡片、表格、状态标签等通用样式应优先复用既有 class。
-8. 模拟数据生成和演示数据结构写入 `R/sample_data.R`，用于保证 app 在无真实数据时可运行。
-9. 数据读取统一通过 `R/data_access.R` 暴露入口，例如 `load_dashboard_data()`；页面模块不得直接读取 `data/` 目录或硬编码文件路径。
-10. 后续如接入真实数据，清洗、标准化和衍生字段处理写入 `R/data_prepare.R` 或独立处理脚本，例如 `R/process_basic_data.R`；不要混入页面 module 或图表函数。
+7. UI 修改前必须阅读 `UI_STYLE_GUIDE.MD`，并遵守 Fluent Light + Carbon Edge + BSE Brand 视觉规范。导航、卡片、表格、状态标签等通用样式应优先复用既有 class。
+8. 页面内容结构优先维护在 `config/page_blocks.yml`；指标名称同步维护在 `config/indicators.yml`。
+9. 数据读取统一通过 `R/data_access.R` 暴露入口，例如 `load_dashboard_data()`；页面模块不得直接读取 `data/processed/`。当前公司画像存在少量为了地理联动和展开明细读取 `data/raw/上市公司基本情况.xlsx`、`data/raw/北证A股近期走势.xlsx` 的过渡逻辑，后续应逐步迁移到 processed 和指标层。
+10. 清洗、标准化和衍生字段处理写入 `R/data_prepare.R` 或 `R/process_basic_data.R`；不要混入页面 module 或图表函数。
 11. 指标计算写入 `R/metrics_*.R`，按画像主题拆分：market、company、development、quality。指标函数应输入标准化数据，输出页面可直接消费的结构化结果。
-12. 图表函数写入 `R/chart_*.R`，按画像主题拆分。图表函数只负责可视化表达，不负责读取原始数据或清洗数据；主图优先使用 `highcharter`，仅在运行环境缺少该包时回退到简化数据表，避免页面中断。
+12. 图表函数写入 `R/chart_*.R`，按画像主题拆分。图表函数只负责可视化表达，不负责清洗原始数据；如必须临时读取 Excel，应在函数注释和文档中标明，并优先安排后续迁移。
 13. 风险阈值、状态阈值和口径边界写入 `config/thresholds.yml`，不要散落在 R 代码中。
-14. 指标清单、指标命名、页面指标映射写入 `config/indicators.yml`，保持各页面指标名称一致。
-15. 主题颜色、圆角、阴影、字体等设计 token 优先同步维护在 `www/custom.css` 和 `config/theme.yml`；CSS 是实际生效来源，YAML 作为配置参考和后续主题化入口。
-16. 新增依赖必须同步更新 `README.md`，并说明用途；不要为了单个视觉或占位效果引入重型依赖。
+14. 主题颜色、圆角、阴影、字体等设计 token 优先同步维护在 `www/custom.css` 和 `config/theme.yml`；CSS 是实际生效来源，YAML 作为配置参考和后续主题化入口。
 
-## 真实数据维护规则
+## 当前页面和图表边界
+
+### 市场定位
+
+当前页面是项目中图表最丰富的页面，已不只是两张主图。
+
+已实现重点：
+
+* 页面模型中的多市场规模气泡图。
+* 市场成交规模和板块成交趋势组合图。
+* 各市场规模对比 + 上市公司市值区间分布组合图。
+* 北交所历年上市公司数量 + 企业所有权性质分布组合图。
+* 市值与市盈率散点图。
+* 行业分布、行业矩形树图等可复用图表函数。
+
+维护原则：
+
+* 仍以“市场定位”为叙事核心，不继续无限堆图。
+* 新增图表应优先合并到已有组合卡片或放入明细区。
+* 与成交、行业、市值、PE 相关的新口径优先进入 `metrics_market.R` 和 `chart_market.R`。
+
+### 公司画像
+
+当前页面已形成“地理分布 + 经营明细 + 行业结构”的交互式画像。
+
+已实现重点：
+
+* 中国省级地图和城市气泡，支持点击筛选。
+* 收入与利润散点图。
+* 经营状态环图。
+* reactable 公司明细表，支持搜索、分页和展开详情。
+* 展开详情中展示公司基本情况、经营业绩和近 30 日股价走势。
+* 各市场行业分布和行业矩形树图复用市场定位图表能力。
+
+维护原则：
+
+* 地图、公司表和展开详情应优先读取 processed 标准字段；当前读取 raw Excel 的逻辑属于过渡实现。
+* 公司画像的新增分析应围绕“公司群体特征”，不要变成单家公司档案系统。
+
+### 市场生态
+
+当前页面主要通过 `page_model_ui("market_development")` 渲染。
+
+主图：
+
+* 上市与融资发展趋势。
+* 交易活跃与市场生态趋势。
+
+维护原则：
+
+* 优先补强时间序列和关键事件解释。
+* 后续交互可围绕日期、阶段、融资类型、审核状态展开。
+
+### 市场质量画像
+
+当前页面主要通过 `page_model_ui("market_quality")` 渲染。
+
+主图：
+
+* 市场质量状态矩阵。
+* 风险类型-行业热力图。
+
+维护原则：
+
+* 风险色保持克制。
+* 风险阈值优先进入 `config/thresholds.yml`。
+* 公司明细重点体现“公司-风险类型-风险等级-处置状态”。
+
+## 展示模式
+
+当前页面模型支持两种模式：
+
+* `semantic`：默认模式，从 processed 标准表和指标函数构建页面 KPI、洞察和明细。
+* `placeholder`：演示占位模式，由 `config/page_blocks.yml` 和固定随机种子生成页面内容。
+
+切换方式：
+
+```r
+Sys.setenv(BSE_PRESENTATION_MODE = "placeholder")
+shiny::runApp()
+```
+
+或：
+
+```r
+Sys.setenv(BSE_PRESENTATION_MODE = "semantic")
+shiny::runApp()
+```
+
+## 数据维护规则
 
 真实数据接入应遵循“原始数据可追溯、处理数据标准化、页面只读标准数据”的原则。
 
-1. `data/raw/` 保存原始真实数据，按来源和日期分目录维护，例如：
-
-```text
-data/raw/{source}/{YYYYMMDD}/...
-```
-
-原始数据不在应用运行时修改；如需更新，新增批次目录，不覆盖旧批次。
-
-2. `data/processed/` 保存清洗后的标准数据，推荐使用 parquet 或 duckdb。后续建议逐步形成以下标准表：
-
-```text
-dim_company
-dim_industry
-fact_market_daily
-fact_financial_period
-fact_financing
-fact_fundraising_use
-fact_supervision
-fact_risk_tag
-fact_listing_pipeline
-```
-
-3. `data/cache/` 仅保存可再生成的中间缓存、预聚合结果或图表缓存。缓存不能作为唯一事实来源。
-4. 真实数据导入流程应优先写成可重复运行的函数或脚本，入口放在 `R/data_prepare.R` 或后续 `scripts/` 目录中。
-5. `R/data_access.R` 是应用读取数据的唯一入口。未来可以让 `load_dashboard_data(use_demo = FALSE)` 从 `data/processed/` 读取真实数据；演示模式继续从 `R/sample_data.R` 提供最小数据。
-6. 页面模块和 UI 组件不得直接依赖真实数据文件格式；真实数据变化应通过 `data_access`、`data_prepare` 和 `metrics_*` 层吸收。
-7. 每次更新真实数据后，应记录数据来源、批次日期、处理时间、处理脚本版本和关键校验结果。建议后续增加：
-
-```text
-data/processed/data_manifest.yml
-```
-
-8. 真实数据质量校验至少应覆盖：主键唯一性、日期范围、核心字段缺失率、金额/比例字段类型、指标口径范围、异常值数量。
-9. 不要把敏感源数据、账号、密钥、接口 token 写入仓库；密钥使用环境变量或本地配置，并避免提交。
+1. `data/raw/` 保存原始真实数据。原始数据不在应用运行时修改；如需更新，新增批次或明确替换来源，不在处理脚本中覆盖改写。
+2. `data/processed/` 保存清洗后的标准数据。当前以 UTF-8 CSV 为主。
+3. `data/cache/` 仅保存可再生成的地图、坐标或中间缓存。缓存不能作为唯一事实来源。
+4. `R/data_access.R` 是应用读取数据的统一入口。页面模块原则上不得绕过该入口读取文件。
+5. 每次更新真实数据后，应记录数据来源、处理时间、处理脚本版本和关键校验结果，至少更新 `data/processed/data_quality_log.csv`。
+6. 真实数据质量校验至少应覆盖：主键唯一性、日期范围、核心字段缺失率、金额/比例字段类型、指标口径范围、异常值数量。
+7. 不要把敏感源数据、账号、密钥、接口 token 写入仓库；密钥使用环境变量或本地配置，并避免提交。
 
 ## 数据处理规则
 
 进行任何数据导入、清洗、加工、字段调整或 processed 表生成任务前，必须先阅读 `docs/DATA_PROCESSING.md`，并保持处理口径、字段说明和质量日志规则同步。
 
 1. 任何数据处理逻辑不得写入 `app.R`。
-2. Shiny 页面不得直接读取 `data/raw/` 下的原始 Excel。
+2. Shiny 页面原则上不得直接读取 `data/raw/` 下的原始 Excel；当前公司画像的 raw 读取属于过渡逻辑，修改时应优先迁移。
 3. Shiny 页面和指标函数应优先读取 `data/processed/` 下的标准化结果表，或通过 `R/data_access.R` 暴露的读取入口获取数据。
 4. 原始数据只放在 `data/raw/`，不得在应用运行或处理脚本中覆盖、改写原文件。
 5. 处理结果统一输出到 `data/processed/`。
-6. 数据处理脚本应放在 `R/` 目录下，例如 `R/process_basic_data.R`。
+6. 数据处理脚本应放在 `R/` 目录下，例如 `R/process_basic_data.R`、`R/data_prepare.R`。
 7. 每次新增输出表、字段、指标口径或拟合逻辑，必须同步更新 `docs/DATA_PROCESSING.md`。
 8. Wind 公式未刷新形成的 `#NAME?`、`#VALUE!`、`#N/A` 等异常值不得作为真实数据使用。
 9. 每次数据处理应生成或更新数据质量日志，例如 `data/processed/data_quality_log.csv`。
@@ -176,69 +249,23 @@ data/processed/data_manifest.yml
 
 ## 页面结构规则
 
-Dashboard 包含五个页面：
-
-1. 首页总览
-2. 市场定位
-3. 公司画像
-4. 市场生态
-5. 市场质量画像
-
-每个画像页面采用：
+当前 App 以四个画像页为主。每个画像页面原则上采用：
 
 * 一句话核心判断
 * 5-6 个 KPI 卡片
-* 1-2 张主图
+* 1-2 个核心主图或组合主图区域
 * 关键洞察说明区
-* 明细钻取表
+* 明细钻取表或交互明细组件
 
-不要把页面做成大量指标和图表堆砌。
-
-## 四个画像页面主图
-
-### 市场定位
-
-核心问题：本交易所在资本市场中处于什么位置？
-
-主图：
-
-* 多市场定位气泡图
-* 本所行业市值结构图
-
-### 公司画像
-
-核心问题：本交易所上市公司是什么样的企业？
-
-主图：
-
-* 行业结构与经营贡献矩阵
-* 成长性 × 盈利能力四象限图
-
-### 市场生态
-
-核心问题：本交易所的业务功能是否在持续增强？
-
-主图：
-
-* 上市—融资发展趋势图
-* 交易活跃与市场生态趋势图
-
-### 市场质量画像
-
-核心问题：本交易所市场运行是否健康、风险是否可控？
-
-主图：
-
-* 市场质量状态矩阵
-* 风险类型—行业热力图
+市场定位和公司画像已经根据演示需要扩展了组合图和联动组件，但新增内容仍必须服务页面核心问题，不要做成图表堆砌页。
 
 ## 开发原则
 
-1. 优先保证 app 可以运行。
+1. 优先保证 App 可以运行。
 2. 优先完成可演示原型，再逐步接入真实数据。
 3. 每次修改后检查明显运行错误。
 4. 不要过度工程化。
-5. 不要在 app.R 中堆叠业务逻辑。
+5. 不要在 `app.R` 中堆叠业务逻辑。
 6. 不要在 server 中直接写复杂指标计算。
 7. 不要让各页面 UI 风格割裂。
 8. 页面布局可以差异化，但必须遵守统一视觉系统。
@@ -249,6 +276,8 @@ Dashboard 包含五个页面：
 
 优先使用：
 
+```r
 shiny::runApp()
+```
 
-如新增依赖，请同步更新 README.md。
+如新增依赖，请同步更新 `README.md`。

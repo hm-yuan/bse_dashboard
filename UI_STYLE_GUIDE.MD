@@ -590,6 +590,8 @@ Insight Card 用于放 3-5 条关键发现。
 
 ## 9. 页面布局规范
 
+当前 `app.R` 已挂载四个画像页面：市场定位、公司画像、市场生态、市场质量画像。首页总览在 `config/page_blocks.yml` 和 `R/ui_components.R` 中保留模型与渲染分支，但当前未挂载导航；如后续恢复首页，应继续遵守本节规范。
+
 ### 9.1 首页总览
 
 页面定位：
@@ -901,13 +903,16 @@ config/theme.yml
 
 不要在页面模块中直接写复杂指标计算。
 
-页面模块文件：
+当前页面模块文件：
 
-* R/mod_home.R
 * R/mod_market_position.R
 * R/mod_company_profile.R
 * R/mod_market_development.R
 * R/mod_market_quality.R
+
+如后续恢复首页总览，再新增或恢复：
+
+* R/mod_home.R
 
 ### 12.5 图表函数
 
