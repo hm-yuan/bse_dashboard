@@ -38,6 +38,9 @@ load_dashboard_data()
 * `data/raw/市场板块成交统计（周度日均）.xlsx`
 * `data/raw/时间序列数据.xlsx`
 * `data/raw/北证A股近期走势.xlsx`
+* `data/raw/北交所日度成交情况2020-2024.xlsx`
+* `data/raw/市场交易统计(Wind统计).xlsx`
+* `data/raw/全球主要资本市场情况.xlsx`
 
 当前基础处理脚本主要使用：
 
@@ -49,6 +52,8 @@ load_dashboard_data()
 * `data/raw/市场板块成交统计（周度日均）.xlsx`：用于板块日均成交额趋势。
 * `data/raw/时间序列数据.xlsx`：用于指数走势或市场生态相关时间序列。
 * `data/raw/北证A股近期走势.xlsx`：用于公司展开详情中的近 30 日股价走势。
+* `data/raw/北交所日度成交情况2020-2024.xlsx` 和 `data/raw/市场交易统计(Wind统计).xlsx`：用于市场定位页“北交所交易规模成长”图，当前由图表函数只读合并；后续应迁移到 processed 标准表。
+* `data/raw/全球主要资本市场情况.xlsx`：用于市场定位页“全球主要资本市场对比”图，当前由图表函数只读读取；后续应迁移到 processed 标准表。
 
 维护规则：
 

@@ -1,6 +1,8 @@
 :root {
   --bse-blue: #005BAC;
   --bse-blue-dark: #002B5B;
+  --kpi-klein: #002FA7;
+  --kpi-board-gray: #F2F2F2;
   --bse-cyan: #00A6C8;
   --swiss-black: #0B2A5B;
   --swiss-red: #E3232E;
@@ -19,6 +21,7 @@
   --shadow-card: 0 3px 10px rgba(20, 67, 118, 0.06);
 }
 
+html,
 body {
   background:
     linear-gradient(90deg, rgba(0, 91, 172, 0.045) 1px, transparent 1px),
@@ -26,7 +29,19 @@ body {
     var(--page-bg);
   background-size: 24px 24px;
   color: var(--text-main);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  font-family: "Helvetica Neue", Helvetica, Inter, Arial, "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+}
+
+body,
+button,
+input,
+select,
+textarea,
+.navbar,
+.dashboard-sheet,
+.content-card,
+.highcharts-root text {
+  font-family: "Helvetica Neue", Helvetica, Inter, Arial, "Noto Sans SC", "Microsoft YaHei UI", sans-serif !important;
 }
 
 .navbar,
@@ -83,22 +98,16 @@ body {
   color: var(--text-strong) !important;
 }
 
-.navbar .nav-link.active::after {
-  position: absolute;
-  right: 16px;
-  bottom: -2px;
-  left: 16px;
-  display: block;
-  height: 4px;
-  background: var(--bse-blue);
-  content: "";
-}
-
 .page-shell,
 .dashboard-sheet {
   width: 100%;
   margin: 0 auto;
   padding: 24px 32px 40px;
+}
+
+.dashboard-sheet.portrait-page {
+  margin-top: -8px;
+  padding-top: 0;
 }
 
 .hero-card,
@@ -206,6 +215,89 @@ body {
 /* 市场定位页：图表卡片高度增加 80%（366px → 660px） */
 .market-position-page .chart-grid .chart-content {
   min-height: 660px;
+}
+
+.market-position-page .chart-grid {
+  align-items: stretch;
+}
+
+.market-position-page .chart-grid > .chart-span-right-stack {
+  grid-column: 2;
+  grid-row: span 3;
+}
+
+.market-position-page .chart-grid > .chart-span-wide {
+  grid-column: auto;
+}
+
+.market-position-page .chart-grid > .chart-span-left-double {
+  grid-column: 1;
+  grid-row: span 2;
+}
+
+.market-position-right-stack-card {
+  min-height: 100%;
+}
+
+.market-position-right-stack-card .card-heading {
+  flex: 0 0 auto;
+}
+
+.market-position-right-stack-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 1396px;
+  padding: 16px;
+}
+
+.right-stack-top,
+.right-stack-bottom-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-stack-bottom {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--divider);
+}
+
+.right-stack-top {
+  flex: 0 0 calc(65% - 8px);
+  height: calc(65% - 8px);
+}
+
+.right-stack-bottom {
+  flex: 0 0 calc(35% - 8px);
+  height: calc(35% - 8px);
+}
+
+.right-stack-top .highchart,
+.right-stack-top .html-widget,
+.right-stack-bottom-panel .highchart,
+.right-stack-bottom-panel .html-widget {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+.right-stack-top .shiny-bound-output,
+.right-stack-bottom-panel .shiny-bound-output,
+.right-stack-top .highcharts-container,
+.right-stack-bottom-panel .highcharts-container {
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+.dashboard-grid:empty {
+  display: none;
 }
 
 .dashboard-grid {
@@ -620,6 +712,13 @@ body {
   flex: 1 1 auto;
 }
 
+.market-overview-panel-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .market-overview-panel-header .form-group {
   flex: 0 0 auto;
   margin: 0;
@@ -719,7 +818,7 @@ body {
 
 /* highcharts 自定义切换按钮样式 */
 .highcharts-button text {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif !important;
+  font-family: "Helvetica Neue", Helvetica, Inter, Arial, "Noto Sans SC", "Microsoft YaHei UI", sans-serif !important;
   font-size: 12px !important;
   font-weight: 500 !important;
   fill: #12365D !important;
@@ -1238,6 +1337,111 @@ body {
   fill: #F2F4F7;
 }
 
+.kpi-board {
+  display: grid;
+  grid-template-columns: minmax(220px, 24%) minmax(0, 1fr);
+  min-height: 162px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: "Helvetica Neue", Helvetica, Inter, Arial, "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+}
+
+.kpi-board-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 18px 22px;
+  background: var(--kpi-klein);
+  color: #FFFFFF;
+  font-size: clamp(54px, 5.3vw, 96px);
+  font-family: Inter, "Helvetica Neue", Helvetica, Arial, "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+  font-weight: 300;
+  letter-spacing: 1em;
+  line-height: 1;
+  text-indent: 1em;
+  white-space: nowrap;
+}
+
+.kpi-board-metrics.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 0;
+  margin: 0;
+  padding: 32px clamp(22px, 3.2vw, 56px);
+  border: 3px solid var(--kpi-board-gray);
+  border-left: 0;
+  background: var(--kpi-board-gray);
+}
+
+.kpi-board .kpi-card {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-self: center;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.kpi-board .kpi-card::before {
+  display: none;
+}
+
+.kpi-board .kpi-label {
+  color: #333333;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.25;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.kpi-board .kpi-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 12px;
+  padding-bottom: 3px;
+  border-bottom: 3px solid #111111;
+  white-space: nowrap;
+}
+
+.kpi-board .kpi-value {
+  min-width: 0;
+  color: #000000;
+  font-size: clamp(32px, 3vw, 56px);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-board .kpi-unit {
+  color: #333333;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.kpi-board .kpi-change {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .hero-card {
     grid-template-columns: 1fr;
@@ -1247,6 +1451,20 @@ body {
     min-height: 42px;
     border-right: 0;
     border-bottom: 1px solid var(--bse-blue-dark);
+  }
+
+  .kpi-board {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-board-title {
+    min-height: 120px;
+    font-size: 64px;
+  }
+
+  .kpi-board-metrics.kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 24px;
   }
 }
 
@@ -1259,4 +1477,142 @@ body {
 .content-card.chart-card.industry-distribution-card .chart-content > .highchart,
 .content-card.chart-card.industry-distribution-card .chart-content > .html-widget {
   min-height: 300px !important;
+}
+
+.market-position-page .market-position-right-stack-card .market-position-right-stack-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.market-position-page .market-position-right-stack-content > .right-stack-top {
+  flex: 0 0 calc(65% - 8px) !important;
+  height: calc(65% - 8px) !important;
+}
+
+.market-position-page .market-position-right-stack-content > .right-stack-bottom {
+  flex: 0 0 calc(35% - 8px) !important;
+  height: calc(35% - 8px) !important;
+}
+
+.market-position-page .chart-grid {
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.market-position-page .chart-grid > .content-card {
+  min-height: 0;
+}
+
+.market-position-page .chart-grid .chart-content {
+  min-height: 360px;
+}
+
+.market-position-page .chart-grid .chart-content.market-overview-content,
+.market-position-page .chart-grid .market-position-placeholder-pair-content {
+  min-height: 360px;
+}
+
+.market-position-placeholder-pair-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  padding: 18px 20px 14px;
+}
+
+.market-position-placeholder-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  border-right: 1px solid var(--divider);
+}
+
+.market-position-placeholder-panel:last-child {
+  border-right: 0;
+}
+
+.market-position-placeholder-panel .empty-state {
+  flex: 1 1 auto;
+}
+
+.global-market-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 12px 18px 0;
+}
+
+.global-market-checks {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.global-market-toolbar .form-group {
+  width: auto !important;
+  margin: 0;
+}
+
+.global-market-toolbar .checkbox {
+  margin: 0;
+}
+
+.global-market-toolbar .checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #17324D;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.global-market-toolbar input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--bse-blue-dark);
+}
+
+.global-market-toolbar .form-select {
+  min-height: 32px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  border-color: #C9D8E8;
+  color: #17324D;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.global-capital-market-card .global-capital-market-content {
+  padding: 4px 18px 10px;
+}
+
+.market-position-page .chart-grid {
+  grid-auto-rows: 450px !important;
+}
+
+.market-position-page .chart-grid > .content-card {
+  height: 100%;
+  overflow: hidden;
+}
+
+.market-position-page .chart-grid .chart-content,
+.market-position-page .chart-grid .chart-content.market-overview-content,
+.market-position-page .chart-grid .market-position-placeholder-pair-content,
+.market-position-page .chart-grid .global-capital-market-content,
+.market-position-page .market-position-right-stack-card .market-position-right-stack-content {
+  min-height: 0 !important;
+}
+
+.market-position-page .market-position-placeholder-pair-card .market-position-placeholder-pair-content {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.market-position-page .market-position-placeholder-pair-content > .market-position-placeholder-panel {
+  width: 100%;
+  flex: initial !important;
 }

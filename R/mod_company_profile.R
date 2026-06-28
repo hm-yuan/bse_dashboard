@@ -63,8 +63,7 @@ companyProfileUI <- function(id) {
 
   dashboard_sheet(
     class = "portrait-page company-profile-page",
-    hero_card(model$judgment),
-    kpi_grid(model$kpis),
+    kpi_grid(model$kpis, kpi_board_label("company_profile", model)),
     dashboard_grid(
       class = "chart-grid company-profile-main-grid",
       geo_map_combined

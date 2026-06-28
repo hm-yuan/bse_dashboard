@@ -226,7 +226,8 @@ plot_market_position_bubble <- function(df) {
 
   # 用途：为各市场指定固定顺序与配色，与市场板块成交统计图保持一致。
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#005BAC")
+  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#00A6C8"
+)
   names(board_palette) <- board_order
   # 调色盘采用现代蓝色为主，北交所使用品牌蓝高亮。
   # 气泡图数据中的市场名称与板块配色名称略有差异，建立映射关系。
@@ -312,7 +313,7 @@ plot_company_pe_market_cap_scatter <- function(df) {
   }
 
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#0B2A5B", "#4E95D9", "#6F8095", "#BFD6EF", "#005BAC")
+  board_palette <- c("#0B2A5B", "#4E95D9", "#6F8095", "#BFD6EF", "#00A6C8")
   names(board_palette) <- board_order
   # 调色盘采用现代蓝色为主，北交所使用品牌蓝高亮。
 
@@ -390,7 +391,7 @@ plot_company_pe_market_cap_scatter <- function(df) {
     highcharter::hc_plotOptions(
       scatter = list(
         turboThreshold = 0,
-        marker = list(radius = 2, symbol = "circle"),
+        marker = list(radius = 3, symbol = "circle"),
         tooltip = list(headerFormat = "")
       )
     ) |>
@@ -967,7 +968,7 @@ plot_board_trading <- function(metric = c("turnover_amount_yi", "avg_daily_turno
   }
 
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#005BAC")
+  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#00A6C8")
   names(board_palette) <- board_order
 
   df$year <- format(df$date, "%Y")
@@ -1017,6 +1018,324 @@ plot_board_trading <- function(metric = c("turnover_amount_yi", "avg_daily_turno
   hc
 }
 
+# 用途：读取并合并北交所交易规模日度数据。
+#       数据来源为 2020-2024 历史文件与 Wind 统计文件，字段保持只读，不改写 raw。
+calc_bse_trading_growth_data <- function(period = c("daily", "monthly", "yearly")) {
+  period <- match.arg(period)
+  files <- c(
+    "data/raw/北交所日度成交情况2020-2024.xlsx",
+    "data/raw/市场交易统计(Wind统计).xlsx"
+  )
+  files <- files[file.exists(files)]
+  if (length(files) == 0L || !requireNamespace("readxl", quietly = TRUE)) {
+    return(data.frame())
+  }
+
+  read_one <- function(path) {
+    dat <- tryCatch(readxl::read_excel(path, sheet = 1), error = function(e) NULL)
+    if (is.null(dat) || nrow(dat) == 0L) return(data.frame())
+    required <- c("日期", "成交额(亿元)", "成交额占AB股总成交额比重(%)", "区间换手率")
+    if (!all(required %in% names(dat))) return(data.frame())
+
+    date_raw <- dat[["日期"]]
+    date_val <- if (inherits(date_raw, "Date")) {
+      date_raw
+    } else if (inherits(date_raw, "POSIXt")) {
+      as.Date(date_raw)
+    } else if (is.numeric(date_raw)) {
+      as.Date(date_raw, origin = "1899-12-30")
+    } else {
+      as.Date(substr(as.character(date_raw), 1L, 10L))
+    }
+
+    out <- data.frame(
+      date = date_val,
+      turnover_amount_yi = chart_safe_number(dat[["成交额(亿元)"]]),
+      turnover_share = chart_safe_number(dat[["成交额占AB股总成交额比重(%)"]]),
+      turnover_rate = chart_safe_number(dat[["区间换手率"]]),
+      source_file = basename(path),
+      stringsAsFactors = FALSE
+    )
+    out[!is.na(out$date), , drop = FALSE]
+  }
+
+  df <- do.call(rbind, lapply(files, read_one))
+  if (!is.data.frame(df) || nrow(df) == 0L) return(data.frame())
+  df <- df[!is.na(df$turnover_amount_yi) | !is.na(df$turnover_share) | !is.na(df$turnover_rate), , drop = FALSE]
+  df <- df[order(df$date, df$source_file), , drop = FALSE]
+  df <- df[!duplicated(df$date, fromLast = TRUE), , drop = FALSE]
+
+  if (identical(period, "daily")) {
+    df$period_date <- df$date
+    df$period_label <- format(df$date, "%Y-%m-%d")
+    return(df[order(df$period_date), c("period_date", "period_label", "turnover_amount_yi", "turnover_rate", "turnover_share"), drop = FALSE])
+  }
+
+  if (identical(period, "monthly")) {
+    df$period_key <- format(df$date, "%Y-%m")
+    period_date <- as.Date(paste0(df$period_key, "-01"))
+    label <- df$period_key
+  } else {
+    df$period_key <- format(df$date, "%Y")
+    period_date <- as.Date(paste0(df$period_key, "-01-01"))
+    label <- df$period_key
+  }
+
+  keys <- sort(unique(df$period_key))
+  out <- do.call(rbind, lapply(keys, function(k) {
+    sub <- df[df$period_key == k, , drop = FALSE]
+    data.frame(
+      period_date = period_date[match(k, df$period_key)],
+      period_label = label[match(k, df$period_key)],
+      turnover_amount_yi = sum(sub$turnover_amount_yi, na.rm = TRUE),
+      turnover_rate = mean(sub$turnover_rate, na.rm = TRUE),
+      turnover_share = mean(sub$turnover_share, na.rm = TRUE),
+      stringsAsFactors = FALSE
+    )
+  }))
+  out[order(out$period_date), , drop = FALSE]
+}
+
+# 用途：绘制北交所交易规模成长 area 线条图，支持日度/月度/年度和指标切换。
+#       月度、年度下，成交额为区间加总，换手率和成交占比为区间平均。
+plot_bse_trading_growth_area <- function(metric = "turnover_amount_yi", period = "monthly") {
+  metric_choices <- c("turnover_amount_yi", "turnover_rate", "turnover_share")
+  period_choices <- c("daily", "monthly", "yearly")
+  metric <- if (metric %in% metric_choices) metric else "turnover_amount_yi"
+  period <- if (period %in% period_choices) period else "monthly"
+
+  df <- calc_bse_trading_growth_data(period)
+  if (!is.data.frame(df) || nrow(df) == 0L || !metric %in% names(df)) {
+    return(chart_empty_state("暂无北交所交易规模数据"))
+  }
+  if (!chart_has_highcharter()) {
+    return(chart_fallback_table("北交所交易规模成长", df, "未检测到 highcharter"))
+  }
+
+  metric_labels <- c(
+    turnover_amount_yi = "成交额（亿元）",
+    turnover_rate = "换手率",
+    turnover_share = "成交占全A股比重"
+  )
+  y_titles <- c(
+    turnover_amount_yi = "成交额（亿元）",
+    turnover_rate = "换手率（%）",
+    turnover_share = "成交占全A股比重（%）"
+  )
+  suffixes <- c(turnover_amount_yi = " 亿元", turnover_rate = "%", turnover_share = "%")
+  decimals <- c(turnover_amount_yi = 1, turnover_rate = 2, turnover_share = 2)
+  period_labels <- c(daily = "日度", monthly = "月度", yearly = "年度")
+
+  df <- df[!is.na(df[[metric]]), , drop = FALSE]
+  df <- df[order(df$period_date), , drop = FALSE]
+  if (nrow(df) == 0L) return(chart_empty_state("暂无北交所交易规模数据"))
+
+  timestamps <- as.numeric(df$period_date) * 86400000
+  data_pairs <- lapply(seq_len(nrow(df)), function(i) {
+    list(x = timestamps[[i]], y = chart_safe_number(df[[metric]][[i]]), label = df$period_label[[i]])
+  })
+  y_max <- max(chart_safe_number(df[[metric]]), na.rm = TRUE)
+  if (!is.finite(y_max)) y_max <- 0
+
+  hs_stripe <- list(
+    pattern = list(
+      path = list(
+        d = "M 0 0 L 10 10 M 9 -1 L 11 1 M -1 9 L 1 11",
+        stroke = "#002FA7",
+        strokeWidth = 1.5,
+        opacity = 0.6
+      ),
+      width = 10,
+      height = 10,
+      backgroundColor = "rgba(11, 42, 91, 0.04)"
+    )
+  )
+
+  chart_hc_base(NULL) |>
+    highcharter::hc_add_dependency("modules/pattern-fill.js") |>
+    highcharter::hc_chart(type = "area", backgroundColor = "transparent") |>
+    highcharter::hc_xAxis(
+      type = "datetime",
+      title = list(text = NULL),
+      dateTimeLabelFormats = list(day = "%Y-%m-%d", week = "%Y-%m-%d", month = "%Y-%m", year = "%Y"),
+      labels = list(style = list(fontSize = "10px"))
+    ) |>
+    hc_y_axis(y_titles[[metric]], min = 0, max = if (y_max > 0) y_max * 1.14 else NULL) |>
+    highcharter::hc_plotOptions(
+      area = list(
+        lineWidth = 2,
+        color = "#0B2A5B",
+        fillColor = hs_stripe,
+        connectNulls = TRUE,
+        marker = list(enabled = FALSE, states = list(hover = list(enabled = TRUE, radius = 4)))
+      )
+    ) |>
+    highcharter::hc_tooltip(
+      useHTML = TRUE,
+      xDateFormat = if (identical(period, "daily")) "%Y-%m-%d" else if (identical(period, "monthly")) "%Y-%m" else "%Y",
+      pointFormat = paste0("<span style=\"color:#0B2A5B\">●</span> ", metric_labels[[metric]], "：<b>{point.y:,.", decimals[[metric]], "f}</b>", suffixes[[metric]])
+    ) |>
+    highcharter::hc_legend(enabled = FALSE) |>
+    highcharter::hc_add_series(
+      type = "area",
+      name = paste0(period_labels[[period]], " ", metric_labels[[metric]]),
+      color = "#0B2A5B",
+      fillColor = hs_stripe,
+      data = data_pairs
+    )
+}
+
+# 用途：读取全球主要资本市场情况，并标准化为图表可直接使用的字段。
+# 输入来源：data/raw/全球主要资本市场情况.xlsx。
+calc_global_capital_market_data <- function() {
+  path <- "data/raw/全球主要资本市场情况.xlsx"
+  if (!file.exists(path) || !requireNamespace("readxl", quietly = TRUE)) {
+    return(data.frame())
+  }
+
+  dat <- tryCatch(readxl::read_excel(path, sheet = 1), error = function(e) NULL)
+  if (is.null(dat) || nrow(dat) == 0L || !"板块" %in% names(dat)) {
+    return(data.frame())
+  }
+
+  find_col <- function(pattern) {
+    hit <- grep(pattern, names(dat), value = TRUE)
+    if (length(hit) == 0L) NA_character_ else hit[[1L]]
+  }
+
+  market_col <- "板块"
+  cap_col <- find_col("总市值")
+  turnover_col <- find_col("日均成交额")
+  turnover_rate_col <- find_col("日均换手率|区间日均换手率")
+  pe_col <- find_col("市盈率")
+  required <- c(cap_col, turnover_col, turnover_rate_col, pe_col)
+  if (any(is.na(required))) {
+    return(data.frame())
+  }
+
+  out <- data.frame(
+    market = trimws(as.character(dat[[market_col]])),
+    total_market_cap_yi = chart_safe_number(dat[[cap_col]]),
+    avg_daily_turnover_2026_yi = chart_safe_number(dat[[turnover_col]]),
+    avg_turnover_rate_2026 = chart_safe_number(dat[[turnover_rate_col]]),
+    pe_ttm_median = chart_safe_number(dat[[pe_col]]),
+    stringsAsFactors = FALSE
+  )
+  out <- out[!is.na(out$market) & nzchar(out$market), , drop = FALSE]
+  out <- out[!grepl("^数据来源", out$market), , drop = FALSE]
+  out
+}
+
+# 用途：绘制全球主要资本市场横向 bar 图。
+#       支持中国市场、成长板块筛选，并按所选统计指标降序排列。
+plot_global_capital_market_bar <- function(metric = "total_market_cap_yi", china_only = FALSE, growth_only = FALSE) {
+  metric_choices <- c("total_market_cap_yi", "avg_daily_turnover_2026_yi", "avg_turnover_rate_2026", "pe_ttm_median")
+  metric <- if (metric %in% metric_choices) metric else "total_market_cap_yi"
+
+  df <- calc_global_capital_market_data()
+  if (!is.data.frame(df) || nrow(df) == 0L) {
+    return(chart_empty_state("暂无全球主要资本市场数据"))
+  }
+  if (!chart_has_highcharter()) {
+    return(chart_fallback_table("全球主要资本市场情况", df, "未检测到 highcharter"))
+  }
+
+  china_markets <- c("上证A股", "深证A股", "科创板", "创业板", "北证A股", "上市台股", "上柜台股", "港股主板", "港股创业板")
+  growth_markets <- c(
+    "科创板", "创业板", "北证A股", "上柜台股", "港股创业板",
+    "NASDAQ 全球市场(GM)", "韩国创业板市场", "东证标准市场", "AMEX全部股票",
+    "LSE创业板(AIM)", "东证增长市场", "新加坡创业板"
+  )
+
+  if (isTRUE(china_only)) {
+    df <- df[df$market %in% china_markets, , drop = FALSE]
+  }
+  if (isTRUE(growth_only)) {
+    df <- df[df$market %in% growth_markets, , drop = FALSE]
+  }
+  df <- df[!is.na(df[[metric]]), , drop = FALSE]
+  if (nrow(df) == 0L) {
+    return(chart_empty_state("当前筛选条件下暂无数据"))
+  }
+
+  highlight_palette <- c(
+    "上证A股" = "#0B2A5B",
+    "深证A股" = "#4E95D9",
+    "科创板" = "#6F8095",
+    "创业板" = "#BFD6EF",
+    "北证A股" = "#00A6C8"
+  )
+  metric_labels <- c(
+    total_market_cap_yi = "总市值",
+    avg_daily_turnover_2026_yi = "2026年日均成交额",
+    avg_turnover_rate_2026 = "2026年日均换手率",
+    pe_ttm_median = "市盈率TTM"
+  )
+  axis_titles <- c(
+    total_market_cap_yi = "亿元",
+    avg_daily_turnover_2026_yi = "亿元",
+    avg_turnover_rate_2026 = "%",
+    pe_ttm_median = "倍"
+  )
+  suffixes <- c(
+    total_market_cap_yi = " 亿元",
+    avg_daily_turnover_2026_yi = " 亿元",
+    avg_turnover_rate_2026 = "%",
+    pe_ttm_median = " 倍"
+  )
+  decimals <- c(
+    total_market_cap_yi = 0,
+    avg_daily_turnover_2026_yi = 1,
+    avg_turnover_rate_2026 = 2,
+    pe_ttm_median = 1
+  )
+
+  df <- df[order(chart_safe_number(df[[metric]]), decreasing = TRUE), , drop = FALSE]
+  categories <- df$market
+  data <- lapply(seq_len(nrow(df)), function(i) {
+    market <- df$market[[i]]
+    list(
+      name = market,
+      y = chart_safe_number(df[[metric]][[i]]),
+      color = if (market %in% names(highlight_palette)) highlight_palette[[market]] else "#F2F2F2"
+    )
+  })
+
+  chart_hc_base(NULL) |>
+    highcharter::hc_chart(type = "bar", backgroundColor = "transparent", spacing = c(6, 16, 6, 6)) |>
+    highcharter::hc_xAxis(
+      categories = categories,
+      title = list(text = NULL),
+      labels = list(style = list(color = "#2F3A45", fontSize = "11px", fontWeight = "600"))
+    ) |>
+    hc_y_axis(axis_titles[[metric]], min = 0) |>
+    highcharter::hc_plotOptions(
+      bar = list(
+        borderWidth = 0,
+        pointPadding = 0.08,
+        groupPadding = 0.04,
+        dataLabels = list(
+          enabled = TRUE,
+          inside = FALSE,
+          crop = FALSE,
+          overflow = "allow",
+          format = paste0("{point.y:,.", decimals[[metric]], "f}"),
+          style = list(color = "#0F172A", fontSize = "11px", fontWeight = "700", textOutline = "none")
+        )
+      )
+    ) |>
+    highcharter::hc_tooltip(
+      headerFormat = "",
+      pointFormat = paste0("<b>{point.name}</b><br/>", metric_labels[[metric]], "：<b>{point.y:,.", decimals[[metric]], "f}</b>", suffixes[[metric]])
+    ) |>
+    highcharter::hc_legend(enabled = FALSE) |>
+    highcharter::hc_add_series(
+      type = "bar",
+      name = metric_labels[[metric]],
+      data = data
+    )
+}
+
 # 用途：绘制各板块日均成交额堆叠面积图。
 #       数据来源为 市场板块成交统计，使用真实日期作为时间轴，
 #       堆叠顺序：上证主板 → 深证主板 → 创业板 → 科创板 → 北交所。
@@ -1031,7 +1350,7 @@ plot_board_daily_turnover_area <- function() {
   }
 
   board_order <- c("上证主板", "深证主板", "创业板", "科创板", "北交所")
-  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#005BAC")
+  board_palette <- c("#0B2A5B", "#4E95D9", "#BFD6EF", "#6F8095", "#00A6C8")
   names(board_palette) <- board_order
 
   df <- df[!is.na(df$avg_daily_turnover_yi) & df$avg_daily_turnover_yi >= 0, , drop = FALSE]
@@ -1180,12 +1499,15 @@ plot_bse_annual_listing_bar <- function(df) {
   }
 
   years <- as.character(df$year)
+  total_listed <- chart_safe_number(df$cumulative) + chart_safe_number(df$new)
+  y_max <- max(total_listed, na.rm = TRUE)
+  if (!is.finite(y_max)) y_max <- 0
 
   hs_stripe <- list(
     pattern = list(
       path = list(
         d = "M 0 0 L 10 10 M 9 -1 L 11 1 M -1 9 L 1 11",
-        stroke = "#0B2A5B",
+        stroke = "#002FA7",
         strokeWidth = 1.5,
         opacity = 0.6
       ),
@@ -1197,8 +1519,8 @@ plot_bse_annual_listing_bar <- function(df) {
 
   chart_hc_base("column") |>
     highcharter::hc_add_dependency("modules/pattern-fill.js") |>
-    hc_x_axis("年份", categories = years) |>
-    hc_y_axis("公司家数", min = 0) |>
+    hc_x_axis("", categories = years) |>
+    hc_y_axis("公司家数", min = 0, max = ceiling(y_max * 1.14)) |>
     highcharter::hc_plotOptions(
       column = list(
         stacking = "normal",
@@ -1232,6 +1554,29 @@ plot_bse_annual_listing_bar <- function(df) {
       color = hs_stripe,
       borderColor = "#0B2A5B",
       borderWidth = 1.2
+    ) |>
+    highcharter::hc_add_series(
+      type = "scatter",
+      name = "总上市公司数量",
+      data = lapply(seq_along(total_listed), function(i) {
+        list(x = i - 1L, y = total_listed[[i]])
+      }),
+      showInLegend = FALSE,
+      enableMouseTracking = FALSE,
+      marker = list(enabled = FALSE),
+      dataLabels = list(
+        enabled = TRUE,
+        format = "{point.y:.0f}",
+        y = -8,
+        crop = FALSE,
+        overflow = "allow",
+        style = list(
+          color = "#002B5B",
+          fontSize = "11px",
+          fontWeight = "700",
+          textOutline = "none"
+        )
+      )
     )
 }
 

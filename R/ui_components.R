@@ -49,12 +49,34 @@ kpi_parse_flip_value <- function(value) {
   raw
 }
 
-# 用途：根据 KPI 数据框批量渲染 KPI 卡片网格。
-# 输入来源：`kpis` 参数（数据框）。
-kpi_grid <- function(kpis) {
+# 用途：根据页面标识生成 KPIboard 左侧语义标题。
+# 输入来源：`page_id` 与 `model$title`。
+kpi_board_label <- function(page_id, model = NULL) {
+  switch(
+    page_id,
+    market_position = "主阵地",
+    company_profile = "创新型 ",
+    market_development = "生态",
+    market_quality = "质量",
+    if (!is.null(model$title)) model$title else "画像"
+  )
+}
+
+# 用途：根据 KPI 数据框批量渲染 KPIboard。
+# 输入来源：`kpis` 参数（数据框）、`board_label` 左侧语义标题。
+kpi_grid <- function(kpis, board_label = NULL) {
+  metric_items <- lapply(seq_len(nrow(kpis)), function(i) {
+    kpi_card(kpis$label[[i]], kpis$value[[i]], kpis$unit[[i]], kpis$change[[i]], kpis$status[[i]])
+  })
+
+  if (is.null(board_label)) {
+    return(div(class = "kpi-grid", metric_items))
+  }
+
   div(
-    class = "kpi-grid",
-    lapply(seq_len(nrow(kpis)), function(i) kpi_card(kpis$label[[i]], kpis$value[[i]], kpis$unit[[i]], kpis$change[[i]], kpis$status[[i]]))
+    class = paste("kpi-board", paste0("metric-count-", nrow(kpis))),
+    div(class = "kpi-board-title", board_label),
+    div(class = "kpi-board-metrics kpi-grid", metric_items)
   )
 }
 
@@ -187,8 +209,7 @@ page_model_ui <- function(page_id, exclude_charts = NULL, extra_chart_cards = li
   if (is.null(model)) return(div(class = "page-shell", "页面模型未加载。"))
 
   common <- list(
-    hero_card(model$judgment),
-    kpi_grid(model$kpis)
+    kpi_grid(model$kpis, kpi_board_label(page_id, model))
   )
 
   if (identical(page_id, "home")) {
@@ -203,7 +224,11 @@ page_model_ui <- function(page_id, exclude_charts = NULL, extra_chart_cards = li
   chart_cards <- c(chart_cards, extra_chart_cards)
 
   if (!is.null(bottom_items)) {
-    bottom_grid <- do.call(dashboard_grid, c(list(class = "bottom-grid bottom-grid-custom"), bottom_items))
+    bottom_grid <- if (length(bottom_items) > 0L) {
+      do.call(dashboard_grid, c(list(class = "bottom-grid bottom-grid-custom"), bottom_items))
+    } else {
+      NULL
+    }
   } else {
     bottom_left_card <- if (!is.null(bottom_left)) bottom_left else insight_card(model$insights)
     bottom_right_card <- if (!is.null(bottom_right)) bottom_right else detail_card(model$table_title, model$table, model$table_note)
@@ -217,9 +242,6 @@ page_model_ui <- function(page_id, exclude_charts = NULL, extra_chart_cards = li
 
   dashboard_sheet(
     class = paste("portrait-page", paste0("layout-", model$layout)),
-    c(common, list(
-      dashboard_grid(class = "chart-grid", chart_cards),
-      bottom_grid
-    ))
+    c(common, list(dashboard_grid(class = "chart-grid", chart_cards)), if (!is.null(bottom_grid)) list(bottom_grid) else list())
   )
 }

@@ -45,19 +45,19 @@ market_board_trading_card <- function(ns) {
   )
 }
 
-# 用途：创建各板块月度日均成交额堆叠面积图 + 年度成交对比组合卡片。
-#       左侧 50% 为月度日均成交额堆叠面积图，右侧 50% 为年度板块成交柱状图。
+# 用途：创建各市场规模对比 + 年度成交对比组合卡片。
+#       左侧 50% 为各市场规模对比气泡图，右侧 50% 为年度板块成交柱状图。
 #       布局参考 market_overview_card 的双面板结构。
 board_turnover_combined_card <- function(ns) {
   div(
     class = "content-card chart-card chart-span-wide market-overview-card",
-    card_heading("板块成交规模与趋势", "左侧：周度日均成交额堆叠；右侧：年度板块成交对比"),
+    card_heading("市场规模与成交趋势", "左侧：各市场规模对比；右侧：年度板块成交对比"),
     div(
       class = "chart-content market-overview-content",
       div(
         class = "market-overview-panel market-overview-left",
-        div(class = "market-overview-panel-heading", "各板块成交规模情况"),
-        chart_widget(plot_board_daily_turnover_area())
+        div(class = "market-overview-panel-heading", "各市场规模对比"),
+        chart_widget(plot_market_position_bubble(calc_market_position_bubble(dashboard_data)))
       ),
       div(
         class = "market-overview-panel market-overview-right",
@@ -78,6 +78,36 @@ board_turnover_combined_card <- function(ns) {
   )
 }
 
+# 用途：创建全球主要资本市场横向对比卡片，替代原“市场规模与成交趋势”和“预留分析区”。
+global_capital_market_card <- function(ns) {
+  div(
+    class = "content-card chart-card chart-span-left-double global-capital-market-card",
+    card_heading("全球主要资本市场对比", "横向比较全球主要资本市场的规模、流动性和估值水平"),
+    div(
+      class = "global-market-toolbar",
+      div(
+        class = "global-market-checks",
+        shiny::checkboxInput(ns("global_market_china_only"), "中国市场", value = FALSE),
+        shiny::checkboxInput(ns("global_market_growth_only"), "成长板块", value = FALSE)
+      ),
+      shiny::selectInput(
+        ns("global_market_metric"),
+        label = NULL,
+        choices = c(
+          "总市值" = "total_market_cap_yi",
+          "2026年日均成交额" = "avg_daily_turnover_2026_yi",
+          "2026年日均换手率" = "avg_turnover_rate_2026",
+          "市盈率TTM" = "pe_ttm_median"
+        ),
+        selected = "total_market_cap_yi",
+        width = "180px",
+        selectize = FALSE
+      )
+    ),
+    div(class = "chart-content global-capital-market-content", highcharter::highchartOutput(ns("global_capital_market_chart"), height = "100%"))
+  )
+}
+
 # 用途：创建市场定位页右侧占位演示卡片，用于填充图表网格空白位置。
 # 输入来源：无，仅作布局占位。
 market_placeholder_card <- function() {
@@ -88,25 +118,51 @@ market_placeholder_card <- function() {
   )
 }
 
-# 用途：创建北交所上市公司数量 + 企业所有权性质分布组合卡片。
-#       左侧 50% 为北交所历年上市数量柱状图，右侧 50% 为企业所有权性质分布。
+# 用途：创建北交所上市公司数量 + 北交所交易规模成长组合卡片。
+#       左侧 50% 为北交所历年上市数量柱状图，右侧 50% 为北交所交易规模成长图。
 #       布局参考 market_overview_card 的双面板结构。
-# 输入来源：calc_bse_annual_listing() 和 calc_enterprise_nature_data() 数据。
-bse_enterprise_nature_combined_card <- function(ns) {
+# 输入来源：calc_bse_annual_listing() 和北交所交易规模日度数据。
+bse_listing_market_bubble_card <- function(ns) {
   div(
     class = "content-card chart-card chart-span-wide market-overview-card",
-    card_heading("北交所上市公司数量与企业所有权性质", "左侧：北交所历年上市数量；右侧：企业所有权性质分布"),
+    card_heading("北交所上市公司数量与交易成长", "左侧：北交所历年上市数量；右侧：北交所交易规模成长"),
     div(
       class = "chart-content market-overview-content",
       div(
         class = "market-overview-panel market-overview-left",
-        div(class = "market-overview-panel-heading", "北交所历年上市公司数量"),
+        div(class = "market-overview-panel-heading", "始终保持稳健积极的上市公司规模增长"),
         highcharter::highchartOutput(ns("bse_annual_listing_chart"), height = "100%")
       ),
       div(
         class = "market-overview-panel market-overview-right",
-        div(class = "market-overview-panel-heading", "企业所有权性质分布"),
-        highcharter::highchartOutput(ns("enterprise_nature_chart"), height = "100%")
+        div(
+          class = "market-overview-panel-header",
+          div(class = "market-overview-panel-heading", "以流动性水平的改善增强市场价值发现功能"),
+          div(
+            class = "market-overview-panel-controls",
+            shiny::selectInput(
+              ns("bse_growth_period"),
+              label = NULL,
+              choices = c("日度" = "daily", "月度" = "monthly", "年度" = "yearly"),
+              selected = "monthly",
+              width = "96px",
+              selectize = FALSE
+            ),
+            shiny::selectInput(
+              ns("bse_growth_metric"),
+              label = NULL,
+              choices = c(
+                "成交额（亿元）" = "turnover_amount_yi",
+                "换手率" = "turnover_rate",
+                "成交占全A股比重" = "turnover_share"
+              ),
+              selected = "turnover_amount_yi",
+              width = "156px",
+              selectize = FALSE
+            )
+          )
+        ),
+        highcharter::highchartOutput(ns("bse_trading_growth_chart"), height = "100%")
       )
     )
   )
@@ -228,6 +284,58 @@ market_pe_scatter_card <- function(ns) {
   )
 }
 
+# 用途：创建市场定位页右侧跨行组合卡片。
+#       上部 65% 为市值与市盈率分布；下部 35% 为企业所有权性质分布与上市公司市值分布。
+# 输入来源：服务端 pe_scatter_chart、enterprise_nature_chart、market_cap_distribution_chart。
+market_position_right_stack_card <- function(ns) {
+  div(
+    class = "content-card chart-card chart-span-right-stack market-position-right-stack-card",
+    card_heading("估值、股权性质与市值分布", "上部：市值与市盈率分布；下部：企业性质与上市公司市值结构"),
+    div(
+      class = "chart-content market-position-right-stack-content",
+      div(
+        class = "right-stack-top",
+        div(class = "market-overview-panel-heading", "市值与市盈率分布"),
+        highcharter::highchartOutput(ns("pe_scatter_chart"), height = "100%")
+      ),
+      div(
+        class = "right-stack-bottom",
+        div(
+          class = "right-stack-bottom-panel",
+          div(class = "market-overview-panel-heading", "企业所有权性质分布"),
+          highcharter::highchartOutput(ns("enterprise_nature_chart"), height = "100%")
+        ),
+        div(
+          class = "right-stack-bottom-panel",
+          div(class = "market-overview-panel-heading", "上市公司市值分布"),
+          highcharter::highchartOutput(ns("market_cap_distribution_chart"), height = "100%")
+        )
+      )
+    )
+  )
+}
+
+# 用途：创建市场定位页左侧第三行占位组合卡片，承载后续新增图表。
+market_position_placeholder_pair_card <- function() {
+  div(
+    class = "content-card chart-card chart-span-wide market-position-placeholder-pair-card",
+    card_heading("预留分析区", "用于后续扩展市场定位相关图表"),
+    div(
+      class = "chart-content market-position-placeholder-pair-content",
+      div(
+        class = "market-position-placeholder-panel",
+        div(class = "market-overview-panel-heading", "占位图 01"),
+        chart_empty_state("预留图表")
+      ),
+      div(
+        class = "market-position-placeholder-panel",
+        div(class = "market-overview-panel-heading", "占位图 02"),
+        chart_empty_state("预留图表")
+      )
+    )
+  )
+}
+
 # 用途：创建企业所有权性质百分比柱状图卡片。
 enterprise_nature_card <- function(ns) {
   div(
@@ -290,11 +398,12 @@ marketPositionUI <- function(id) {
     page_model_ui(
       "market_position",
       exclude_charts = c("market_bubble", "industry_treemap"),
-      extra_chart_cards = list(bse_enterprise_nature_combined_card(ns), market_pe_scatter_card(ns)),
-      bottom_items = list(
-        board_turnover_combined_card(ns),
-        market_bubble_and_cap_distribution_card(ns)
+      extra_chart_cards = list(
+        bse_listing_market_bubble_card(ns),
+        market_position_right_stack_card(ns),
+        global_capital_market_card(ns)
       ),
+      bottom_items = list(),
       exclude_summary = TRUE
     )
   )
@@ -308,6 +417,18 @@ marketPositionServer <- function(id) {
 
     output$bse_annual_listing_chart <- highcharter::renderHighchart({
       plot_bse_annual_listing_bar(calc_bse_annual_listing())
+    })
+
+    output$bse_trading_growth_chart <- highcharter::renderHighchart({
+      plot_bse_trading_growth_area(input$bse_growth_metric, input$bse_growth_period)
+    })
+
+    output$global_capital_market_chart <- highcharter::renderHighchart({
+      plot_global_capital_market_bar(
+        metric = input$global_market_metric,
+        china_only = isTRUE(input$global_market_china_only),
+        growth_only = isTRUE(input$global_market_growth_only)
+      )
     })
 
     output$market_cap_distribution_chart <- highcharter::renderHighchart({
