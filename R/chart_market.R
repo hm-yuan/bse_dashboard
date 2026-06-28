@@ -11,17 +11,18 @@ chart_has_highcharter <- function() {
 # 输入来源：无；颜色与页面视觉规范由统一主题维护。
 chart_theme_palette <- function() {
   c(
-    "#1D6FEA",
-    "#002B5B",
-    "#6E8FB8",
-    "#A9BED8",
-    "#D8E2F0",
-    "#64748B",
-    "#16A34A",
+    "#005BAC",
+    "#0B2A5B",
+    "#00A6C8",
+    "#4E95D9",
+    "#8DBCEB",
+    "#BFD6EF",
+    "#6F8095",
+    "#22A06B",
     "#F59E0B",
-    "#D92D20",
-    "#EEF4FB",
-    "#F8FAFD"
+    "#E3232E",
+    "#D7ECFF",
+    "#EEF5FC"
   )
 }
 
@@ -33,20 +34,20 @@ chart_bloom_theme <- function() {
     chart = list(
       backgroundColor = "transparent"
     ),
-    title = list(style = list(color = "#0F172A", fontWeight = "700")),
-    subtitle = list(style = list(color = "#64748B")),
-    legend = list(itemStyle = list(color = "#0F172A", fontWeight = "600")),
+    title = list(style = list(color = "#0B2A5B", fontWeight = "700")),
+    subtitle = list(style = list(color = "#65758A")),
+    legend = list(itemStyle = list(color = "#26384D", fontWeight = "600")),
     xAxis = list(
-      lineColor = "#D8E2F0",
-      tickColor = "#D8E2F0",
-      gridLineColor = "#EEF4FB",
-      labels = list(style = list(color = "#64748B"))
+      lineColor = "#B7CBE2",
+      tickColor = "#B7CBE2",
+      gridLineColor = "#E8F0F8",
+      labels = list(style = list(color = "#65758A"))
     ),
     yAxis = list(
-      lineColor = "#D8E2F0",
-      tickColor = "#D8E2F0",
-      gridLineColor = "#EEF4FB",
-      labels = list(style = list(color = "#64748B"))
+      lineColor = "#B7CBE2",
+      tickColor = "#B7CBE2",
+      gridLineColor = "#E8F0F8",
+      labels = list(style = list(color = "#65758A"))
     )
   )
 }
@@ -55,17 +56,17 @@ chart_bloom_theme <- function() {
 # 输入来源：无，函数内部定义的常量颜色值。
 chart_colors <- function() {
   list(
-    bse_blue = "#1D6FEA",
-    bse_blue_soft = "#A9BED8",
-    bse_cyan = "#6E8FB8",
-    navy = "#002B5B",
-    slate = "#64748B",
-    grid = "#EEF4FB",
-    success = "#16A34A",
+    bse_blue = "#005BAC",
+    bse_blue_soft = "#8DBCEB",
+    bse_cyan = "#00A6C8",
+    navy = "#0B2A5B",
+    slate = "#6F8095",
+    grid = "#E8F0F8",
+    success = "#22A06B",
     warning = "#F59E0B",
-    danger = "#D92D20",
+    danger = "#E3232E",
     risk_orange = "#F59E0B",
-    risk_light = "#FFF7E6"
+    risk_light = "#FFF3D0"
   )
 }
 
@@ -122,7 +123,7 @@ chart_hc_base <- function(type = NULL, height = NULL) {
     ) |>
     highcharter::hc_tooltip(
       backgroundColor = "#FFFFFF",
-      borderColor = "#D8E2F0",
+      borderColor = "#B7CBE2",
       borderRadius = 4,
       shadow = FALSE,
       style = list(color = colors$navy, fontSize = "12px")
@@ -139,12 +140,12 @@ chart_hc_base <- function(type = NULL, height = NULL) {
 chart_hc_axis <- function(title, categories = NULL, opposite = FALSE, min = NULL, max = NULL, plot_lines = NULL, reversed = FALSE, type = NULL, tick_positions = NULL, labels = NULL) {
   colors <- chart_colors()
   axis <- list(
-    title = list(text = title, style = list(color = "#64748B", fontSize = "11px", fontWeight = "500")),
+    title = list(text = title, style = list(color = "#60758D", fontSize = "11px", fontWeight = "500")),
     opposite = opposite,
-    lineColor = "#D8E2F0",
-    tickColor = "#D8E2F0",
+    lineColor = "#C8D5E3",
+    tickColor = "#C8D5E3",
     gridLineColor = colors$grid,
-    labels = list(style = list(color = "#64748B", fontSize = "11px"))
+    labels = list(style = list(color = "#60758D", fontSize = "11px"))
   )
   if (!is.null(categories)) axis$categories <- categories
   if (!is.null(min)) axis$min <- min

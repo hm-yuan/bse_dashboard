@@ -16,7 +16,7 @@ ui <- page_navbar(
   id = "main_nav",
   theme = app_theme,
   header = tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css?v=20260627-swiss"),
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css?v=20260627-industry"),
     tags$script(src = "force_chart_width.js"),
     tags$script(src = "kpi_flip.js"),
     tags$script(src = "stock_mini_chart.js?v=5")

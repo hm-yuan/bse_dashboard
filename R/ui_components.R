@@ -14,41 +14,6 @@ dashboard_grid <- function(..., class = NULL) {
   div(class = paste(c("dashboard-grid", class), collapse = " "), ...)
 }
 
-# 用途：从页面 section 字符串中提取两位页面编号，供瑞士风页头展示。
-# 输入来源：`section` 参数（来自 config/page_blocks.yml）。
-swiss_page_number <- function(section) {
-  raw <- trimws(as.character(section %||% ""))
-  match <- regmatches(raw, regexpr("[0-9]{2}", raw))
-  if (length(match) == 0L || identical(match, character(0))) return("")
-  match[[1L]]
-}
-
-# 用途：创建瑞士风页面头部，展示页面编号、标题、核心判断和副标题。
-# 输入来源：`model` 页面模型。
-swiss_page_header <- function(model) {
-  number <- swiss_page_number(model$section)
-  div(
-    class = "swiss-page-header",
-    div(
-      class = "swiss-page-number",
-      if (nzchar(number)) number else "—"
-    ),
-    div(
-      class = "swiss-page-heading",
-      div(class = "swiss-page-kicker", model$section %||% ""),
-      h1(class = "swiss-page-title", model$title %||% ""),
-      div(class = "swiss-page-subtitle", model$judgment %||% model$subtitle %||% ""),
-      if (!is.null(model$subtitle)) div(class = "swiss-page-note", model$subtitle)
-    )
-  )
-}
-
-# 用途：兼容页面头部命名，供后续模块调用。
-# 输入来源：`model` 页面模型。
-dashboard_page_header <- function(model) {
-  swiss_page_header(model)
-}
-
 # 用途：创建顶部核心判断卡片，展示页面主标题与核心观点。
 # 输入来源：`text` 参数、`label` 参数。
 hero_card <- function(text, label = "核心判断") {
@@ -63,14 +28,14 @@ kpi_card <- function(label, value, unit = NULL, change = NULL, status = "neutral
   has_numeric <- is.finite(numeric_value)
 
   div(
-    class = paste("kpi-card swiss-kpi-item", paste0("kpi-", status)),
+    class = paste("kpi-card", paste0("kpi-", status)),
     div(class = "kpi-label", label),
     div(
       class = "kpi-value-row",
-      span(class = "kpi-value swiss-kpi-value", `data-target` = if (has_numeric) numeric_value else NA_real_, value),
+      span(class = "kpi-value", `data-target` = if (has_numeric) numeric_value else NA_real_, value),
       if (!is.null(unit)) span(class = "kpi-unit", unit)
     ),
-    if (!is.null(change)) metric_delta(change, status)
+    if (!is.null(change)) div(class = "kpi-change", change)
   )
 }
 
@@ -88,7 +53,7 @@ kpi_parse_flip_value <- function(value) {
 # 输入来源：`kpis` 参数（数据框）。
 kpi_grid <- function(kpis) {
   div(
-    class = "kpi-grid swiss-kpi-strip",
+    class = "kpi-grid",
     lapply(seq_len(nrow(kpis)), function(i) kpi_card(kpis$label[[i]], kpis$value[[i]], kpis$unit[[i]], kpis$change[[i]], kpis$status[[i]]))
   )
 }
@@ -99,44 +64,17 @@ status_badge <- function(label, status = "neutral") {
   span(class = paste("status-badge", paste0("status-", status)), label)
 }
 
-# 用途：创建瑞士风状态变化标签。
-# 输入来源：`label` 文本、`status` 状态。
-metric_delta <- function(label, status = "neutral") {
-  delta_status <- switch(
-    as.character(status),
-    "positive" = "positive",
-    "success" = "positive",
-    "warning" = "warning",
-    "danger" = "negative",
-    "negative" = "negative",
-    "neutral"
-  )
-  div(class = paste("kpi-change metric-delta", paste0("delta-", delta_status)), label)
-}
-
 # 用途：根据风险等级文本（低/中/高）映射为对应样式徽章。
 # 输入来源：`level` 参数。
 risk_badge <- function(level) {
   status <- switch(as.character(level), "低" = "success", "中" = "warning", "高" = "danger", "neutral")
-  span(class = paste("risk-tag", paste0("status-", status)), level)
-}
-
-# 用途：创建风险标签，兼容 UI_STYLE_GUIDE 中的命名。
-# 输入来源：`level` 风险等级。
-risk_tag <- function(level) {
-  risk_badge(level)
+  status_badge(level, status)
 }
 
 # 用途：创建卡片标题区域，包含主标题与可选说明文字。
 # 输入来源：`title` 参数、`note` 参数。
 card_heading <- function(title, note = NULL) {
   div(class = "card-heading", h3(title), if (!is.null(note)) p(note))
-}
-
-# 用途：创建瑞士风区块标题。
-# 输入来源：`title`、`note` 参数。
-section_title <- function(title, note = NULL) {
-  div(class = "swiss-section-title", span(title), if (!is.null(note)) small(note))
 }
 
 # 用途：创建图表空状态提示，用于数据缺失或占位场景。
@@ -180,14 +118,14 @@ render_data_chart <- function(type, data = dashboard_data) {
 # 输入来源：`block` 参数（页面块配置对象）。
 chart_card <- function(block) {
   widget <- render_data_chart(block$type)
-  div(class = paste("content-card swiss-card swiss-chart-card", "chart-card", paste0("chart-span-", block$span %||% "equal")), card_heading(block$title, block$note), div(class = "chart-content", chart_widget(widget)))
+  div(class = paste("content-card", "chart-card", paste0("chart-span-", block$span %||% "equal")), card_heading(block$title, block$note), div(class = "chart-content", chart_widget(widget)))
 }
 
 # 用途：创建关键洞察列表卡片。
 # 输入来源：`items` 参数（洞察文本向量）。
 insight_card <- function(items) {
   div(
-    class = "content-card swiss-card swiss-insight-card insight-card",
+    class = "content-card insight-card",
     card_heading("关键洞察", "用于说明图表的后续分析方向"),
     div(class = "insight-list", lapply(seq_along(items), function(i) div(class = "insight-item", span(class = "insight-index", sprintf("%02d", i)), span(items[[i]]))))
   )
@@ -196,7 +134,7 @@ insight_card <- function(items) {
 # 用途：创建内容摘要列表卡片。
 # 输入来源：`title` 参数、`items` 参数（摘要文本向量）。
 summary_card <- function(title, items) {
-  div(class = "content-card swiss-card summary-card", card_heading(title), div(class = "summary-list", lapply(items, function(item) div(class = "summary-item", span(class = "summary-dot"), span(item)))))
+  div(class = "content-card summary-card", card_heading(title), div(class = "summary-list", lapply(items, function(item) div(class = "summary-item", span(class = "summary-dot"), span(item)))))
 }
 
 # 用途：将数据框渲染为带数字右对齐与状态徽章的明细表格。
@@ -221,13 +159,13 @@ detail_table <- function(data) {
 # 用途：创建带标题的明细数据卡片。
 # 输入来源：`title` 参数、`data` 参数、`note` 参数。
 detail_card <- function(title, data, note = NULL) {
-  div(class = "content-card swiss-card swiss-detail-card detail-card", card_heading(title, note), div(class = "table-wrap", detail_table(data)))
+  div(class = "content-card detail-card", card_heading(title, note), div(class = "table-wrap", detail_table(data)))
 }
 
 # 用途：创建画像入口链接卡片，用于首页跳转到各画像页。
 # 输入来源：`title` 参数、`text` 参数、`href` 参数。
 portrait_entry_card <- function(title, text, href) {
-  tags$a(class = "portrait-entry-card swiss-card", href = href, div(class = "portrait-entry-title", title), div(class = "portrait-entry-text", text), span(class = "portrait-entry-action", "查看画像"))
+  tags$a(class = "portrait-entry-card", href = href, div(class = "portrait-entry-title", title), div(class = "portrait-entry-text", text), span(class = "portrait-entry-action", "查看画像"))
 }
 
 home_entry_cards <- function() {
@@ -249,12 +187,12 @@ page_model_ui <- function(page_id, exclude_charts = NULL, extra_chart_cards = li
   if (is.null(model)) return(div(class = "page-shell", "页面模型未加载。"))
 
   common <- list(
-    swiss_page_header(model),
+    hero_card(model$judgment),
     kpi_grid(model$kpis)
   )
 
   if (identical(page_id, "home")) {
-    return(dashboard_sheet(class = "swiss-page home-page", c(common, list(home_entry_cards(), dashboard_grid(class = "bottom-grid", insight_card(model$insights), summary_card("页面结构", model$summary), detail_card(model$table_title, model$table, model$table_note))))))
+    return(dashboard_sheet(class = "home-page", c(common, list(home_entry_cards(), dashboard_grid(class = "bottom-grid", insight_card(model$insights), summary_card("页面结构", model$summary), detail_card(model$table_title, model$table, model$table_note))))))
   }
 
   chart_cards <- lapply(model$charts, function(block) {
@@ -278,7 +216,7 @@ page_model_ui <- function(page_id, exclude_charts = NULL, extra_chart_cards = li
   }
 
   dashboard_sheet(
-    class = paste("swiss-page", "portrait-page", paste0("layout-", model$layout), paste0("page-", page_id)),
+    class = paste("portrait-page", paste0("layout-", model$layout)),
     c(common, list(
       dashboard_grid(class = "chart-grid", chart_cards),
       bottom_grid
