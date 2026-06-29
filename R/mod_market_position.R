@@ -84,27 +84,140 @@ global_capital_market_card <- function(ns) {
     class = "content-card chart-card chart-span-left-double global-capital-market-card",
     card_heading("全球主要资本市场对比", "横向比较全球主要资本市场的规模、流动性和估值水平"),
     div(
-      class = "global-market-toolbar",
-      div(
-        class = "global-market-checks",
-        shiny::checkboxInput(ns("global_market_china_only"), "中国市场", value = FALSE),
-        shiny::checkboxInput(ns("global_market_growth_only"), "成长板块", value = FALSE)
-      ),
-      shiny::selectInput(
-        ns("global_market_metric"),
-        label = NULL,
-        choices = c(
-          "总市值" = "total_market_cap_yi",
-          "2026年日均成交额" = "avg_daily_turnover_2026_yi",
-          "2026年日均换手率" = "avg_turnover_rate_2026",
-          "市盈率TTM" = "pe_ttm_median"
+      class = "global-market-tabs",
+      shiny::tabsetPanel(
+        id = ns("global_market_tabs"),
+        type = "tabs",
+        shiny::tabPanel(
+          "全球主要资本市场对比",
+          value = "global_compare",
+          div(
+            class = "global-market-tab-body",
+            div(
+              class = "global-market-toolbar",
+              div(
+                class = "global-market-checks",
+                shiny::checkboxInput(ns("global_market_china_only"), "中国市场", value = FALSE),
+                shiny::checkboxInput(ns("global_market_growth_only"), "成长板块", value = FALSE)
+              ),
+              shiny::selectInput(
+                ns("global_market_metric"),
+                label = NULL,
+                choices = c(
+                  "总市值" = "total_market_cap_yi",
+                  "2026年日均成交额" = "avg_daily_turnover_2026_yi",
+                  "2026年日均换手率" = "avg_turnover_rate_2026",
+                  "市盈率TTM" = "pe_ttm_median"
+                ),
+                selected = "total_market_cap_yi",
+                width = "180px",
+                selectize = FALSE
+              )
+            ),
+            div(class = "chart-content global-capital-market-content", highcharter::highchartOutput(ns("global_capital_market_chart"), height = "100%"))
+          )
         ),
-        selected = "total_market_cap_yi",
-        width = "180px",
-        selectize = FALSE
+        shiny::tabPanel(
+          "全球资本市场融资规模",
+          value = "global_ipo_financing",
+          div(
+            class = "global-market-tab-body",
+            div(
+              class = "global-market-toolbar",
+              div(class = "global-market-checks"),
+              shiny::selectInput(
+                ns("global_ipo_metric"),
+                label = NULL,
+                choices = c(
+                  "募资额（亿美元）" = "financing_amount_usd_100m",
+                  "募资额同比" = "financing_yoy_pct",
+                  "IPO 数量" = "ipo_count"
+                ),
+                selected = "financing_amount_usd_100m",
+                width = "180px",
+                selectize = FALSE
+              )
+            ),
+            div(class = "chart-content global-ipo-financing-content", highcharter::highchartOutput(ns("global_ipo_financing_chart"), height = "100%"))
+          )
+        ),
+        shiny::tabPanel(
+          "层层递进的市场结构",
+          value = "market_structure",
+          div(
+            class = "chart-content global-market-structure-content",
+            div(
+              class = "market-overview-panel market-overview-left",
+              div(class = "market-overview-panel-heading", "各市场规模对比"),
+              chart_widget(plot_market_position_bubble(calc_market_position_bubble(dashboard_data)))
+            ),
+            div(
+              class = "market-overview-panel market-overview-right",
+              div(
+                class = "market-overview-panel-header",
+                div(class = "market-overview-panel-heading", "各板块年度成交对比"),
+                shiny::selectInput(
+                  ns("board_metric"),
+                  label = NULL,
+                  choices = c("年成交额" = "turnover_amount_yi", "日均成交额" = "avg_daily_turnover_yi"),
+                  selected = "turnover_amount_yi",
+                  width = "132px",
+                  selectize = FALSE
+                )
+              ),
+              highcharter::highchartOutput(ns("board_trading_chart"), height = "100%")
+            )
+          )
+        ),
+        shiny::tabPanel(
+          "服务创新型中小企业",
+          value = "innovative_sme",
+          div(
+            class = "chart-content global-market-sme-content",
+            div(
+              class = "sme-industry-panel",
+              div(
+                class = "market-overview-panel-header",
+                div(class = "market-overview-panel-heading", "各市场行业分布情况"),
+                div(
+                  class = "market-overview-panel-controls",
+                  shiny::selectInput(
+                    ns("market_select"),
+                    label = NULL,
+                    choices = c("全部A股", "上证主板", "深证主板", "创业板", "科创板", "北交所"),
+                    selected = "全部A股",
+                    width = "120px",
+                    selectize = FALSE
+                  ),
+                  shiny::selectInput(
+                    ns("industry_metric"),
+                    label = NULL,
+                    choices = c("公司家数" = "company_count", "公司市值" = "market_cap"),
+                    selected = "company_count",
+                    width = "120px",
+                    selectize = FALSE
+                  )
+                )
+              ),
+              highcharter::highchartOutput(ns("industry_distribution_chart"), height = "100%")
+            ),
+            div(
+              class = "sme-indicator-grid",
+              div(
+                class = "sme-indicator-panel",
+                div(class = "market-overview-panel-heading", "国家级专精特新企业数量"),
+                highcharter::highchartOutput(ns("bse_specialized_new_chart"), height = "100%")
+              ),
+              div(
+                class = "sme-indicator-panel",
+                div(class = "market-overview-panel-heading", "研发强度 > 5% 企业占比"),
+                highcharter::highchartOutput(ns("bse_rd_intensity_chart"), height = "100%")
+              )
+            )
+          )
+        )
       )
-    ),
-    div(class = "chart-content global-capital-market-content", highcharter::highchartOutput(ns("global_capital_market_chart"), height = "100%"))
+    )
   )
 }
 
@@ -429,6 +542,25 @@ marketPositionServer <- function(id) {
         china_only = isTRUE(input$global_market_china_only),
         growth_only = isTRUE(input$global_market_growth_only)
       )
+    })
+
+    output$global_ipo_financing_chart <- highcharter::renderHighchart({
+      plot_global_ipo_financing_bar(input$global_ipo_metric)
+    })
+
+    output$industry_distribution_chart <- highcharter::renderHighchart({
+      plot_market_industry_distribution(
+        calc_market_industry_distribution(input$market_select, input$industry_metric),
+        metric = input$industry_metric
+      )
+    })
+
+    output$bse_specialized_new_chart <- highcharter::renderHighchart({
+      plot_bse_specialized_new_indicator(calc_bse_specialized_new_count())
+    })
+
+    output$bse_rd_intensity_chart <- highcharter::renderHighchart({
+      plot_bse_rd_intensity_indicator(calc_bse_rd_intensity_ratio())
     })
 
     output$market_cap_distribution_chart <- highcharter::renderHighchart({

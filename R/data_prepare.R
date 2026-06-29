@@ -136,6 +136,28 @@ demo_fallback_company_detail <- function(n = 36) {
 
 # 用途：加载公司基础清单作为演示数据生成的骨架
 # 输入来源：data/processed/market_position_company_detail.csv、R/sample_data.R
+demo_city_key <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[[:space:]　]+", "", x, perl = TRUE)
+  x <- gsub("(市|地区|盟|自治州|特别行政区)$", "", x, perl = TRUE)
+  x
+}
+
+demo_load_city_coordinates <- function(processed_dir) {
+  path <- file.path(processed_dir, "city_coordinates.csv")
+  if (!file.exists(path)) {
+    return(data.frame())
+  }
+
+  df <- demo_read_csv_utf8(path)
+  if ("city" %in% names(df) && !"city_key" %in% names(df)) {
+    df$city_key <- demo_city_key(df$city)
+  }
+  if ("longitude" %in% names(df)) df$longitude <- suppressWarnings(as.numeric(df$longitude))
+  if ("latitude" %in% names(df)) df$latitude <- suppressWarnings(as.numeric(df$latitude))
+  df
+}
+
 demo_load_company_spine <- function(processed_dir) {
   path <- file.path(processed_dir, "market_position_company_detail.csv")
   if (file.exists(path)) {
@@ -161,7 +183,7 @@ demo_load_company_spine <- function(processed_dir) {
 
 # 用途：基于公司清单构建 dim_company 标准维表
 # 输入来源：data/processed/market_position_company_detail.csv、R/sample_data.R
-demo_build_dim_company <- function(company_detail) {
+demo_build_dim_company <- function(company_detail, city_coordinates = data.frame()) {
   n <- nrow(company_detail)
   province_city <- data.frame(
     province = c("北京", "江苏", "浙江", "广东", "山东", "安徽", "四川", "湖北", "湖南", "河南", "河北", "上海", "福建", "重庆", "陕西"),
@@ -179,7 +201,7 @@ demo_build_dim_company <- function(company_detail) {
   valid_city <- !is.na(source_city) & nzchar(source_city) & !grepl("^=", source_city)
   fallback_index <- ((seq_len(n) - 1L) %% nrow(province_city)) + 1L
 
-  data.frame(
+  out <- data.frame(
     company_code = company_detail$company_code,
     company_name = company_detail$company_name,
     board = company_detail$board,
@@ -193,6 +215,24 @@ demo_build_dim_company <- function(company_detail) {
     is_specialized_new = stats::runif(n) < specialized_prob,
     stringsAsFactors = FALSE
   )
+
+  out$longitude <- NA_real_
+  out$latitude <- NA_real_
+  if (is.data.frame(city_coordinates) && nrow(city_coordinates) > 0L &&
+      all(c("city_key", "longitude", "latitude") %in% names(city_coordinates))) {
+    out$city_key <- demo_city_key(out$city)
+    city_coordinates <- city_coordinates[is.finite(city_coordinates$longitude) & is.finite(city_coordinates$latitude), , drop = FALSE]
+    matched_index <- match(out$city_key, city_coordinates$city_key)
+    has_match <- !is.na(matched_index)
+    out$longitude[has_match] <- city_coordinates$longitude[matched_index[has_match]]
+    out$latitude[has_match] <- city_coordinates$latitude[matched_index[has_match]]
+    if ("province" %in% names(city_coordinates)) {
+      out$province[has_match] <- city_coordinates$province[matched_index[has_match]]
+    }
+    out$city_key <- NULL
+  }
+
+  out
 }
 
 # 用途：基于 dim_company 构建行业维表
@@ -631,10 +671,11 @@ generate_demo_processed_data <- function(processed_dir = "data/processed", seed 
   }
 
   company_detail <- demo_load_company_spine(processed_dir)
+  city_coordinates <- demo_load_city_coordinates(processed_dir)
   source_note <- attr(company_detail, "source", exact = TRUE)
   fallback_used <- identical(source_note, "R/sample_data.R fallback")
 
-  dim_company <- demo_build_dim_company(company_detail)
+  dim_company <- demo_build_dim_company(company_detail, city_coordinates)
   dim_industry <- demo_build_dim_industry(dim_company)
   metrics <- demo_company_metrics(dim_company, company_detail)
   periods <- as.Date(c("2022-12-31", "2023-12-31", "2024-12-31", "2025-12-31", "2026-06-30"))

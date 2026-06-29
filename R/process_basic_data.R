@@ -488,6 +488,129 @@ standardize_company_fields <- function(df) {
   )
 }
 
+# 用途：生成城市匹配键，兼容“北京/北京市”等常见写法
+# 输入来源：城市名称字段
+normalize_city_key <- function(x) {
+  x <- trimws(as.character(x))
+  x <- gsub("[[:space:]　]+", "", x, perl = TRUE)
+  x <- gsub("(市|地区|盟|自治州|特别行政区)$", "", x, perl = TRUE)
+  x
+}
+
+# 用途：从上市公司基本情况标准化结果中拆分城市经纬度信息表
+# 输入来源：standardize_company_fields() 的输出
+build_city_coordinates <- function(company_df, source_file = "data/raw/上市公司基本情况.xlsx") {
+  empty <- data.frame(
+    province = character(),
+    city = character(),
+    city_key = character(),
+    company_count = integer(),
+    longitude = numeric(),
+    latitude = numeric(),
+    source_file = character(),
+    last_update_time = character(),
+    stringsAsFactors = FALSE
+  )
+
+  if (!all(c("city", "longitude", "latitude") %in% names(company_df))) {
+    log_data_quality(source_file, "city_coordinates_extract", "warning", "缺少城市或经纬度字段，未生成城市经纬度信息表")
+    return(empty)
+  }
+
+  coord <- company_df[, intersect(c("company_code", "province", "city", "longitude", "latitude"), names(company_df)), drop = FALSE]
+  if (!"province" %in% names(coord)) coord$province <- NA_character_
+  if (!"company_code" %in% names(coord)) coord$company_code <- seq_len(nrow(coord))
+  coord$city <- trimws(as.character(coord$city))
+  coord$province <- trimws(as.character(coord$province))
+  coord$city_key <- normalize_city_key(coord$city)
+  coord$longitude <- chart_safe_number(coord$longitude)
+  coord$latitude <- chart_safe_number(coord$latitude)
+  coord <- coord[
+    !is.na(coord$city_key) & nzchar(coord$city_key) &
+      is.finite(coord$longitude) & is.finite(coord$latitude),
+    ,
+    drop = FALSE
+  ]
+
+  if (nrow(coord) == 0L) {
+    log_data_quality(source_file, "city_coordinates_extract", "warning", "未提取到有效城市经纬度记录")
+    return(empty)
+  }
+
+  province <- stats::aggregate(province ~ city_key, coord, function(x) {
+    vals <- unique(x[!is.na(x) & nzchar(x)])
+    if (length(vals) == 0L) NA_character_ else vals[[1L]]
+  })
+  city <- stats::aggregate(city ~ city_key, coord, function(x) {
+    vals <- unique(x[!is.na(x) & nzchar(x)])
+    if (length(vals) == 0L) NA_character_ else vals[[1L]]
+  })
+  count <- stats::aggregate(company_code ~ city_key, coord, function(x) length(unique(x[!is.na(x) & nzchar(as.character(x))])))
+  names(count)[[2]] <- "company_count"
+  lonlat <- stats::aggregate(cbind(longitude, latitude) ~ city_key, coord, function(x) stats::median(x, na.rm = TRUE))
+
+  out <- Reduce(function(x, y) merge(x, y, by = "city_key", all = TRUE), list(city, province, count, lonlat))
+  out$source_file <- basename(source_file)
+  out$last_update_time <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+  out <- out[, c("province", "city", "city_key", "company_count", "longitude", "latitude", "source_file", "last_update_time"), drop = FALSE]
+  out <- out[order(out$province, out$city, na.last = TRUE), , drop = FALSE]
+
+  log_data_quality(source_file, "city_coordinates_extract", "ok", paste0("生成城市经纬度信息 ", nrow(out), " 条"))
+  out
+}
+
+# 用途：读取已拆分的城市经纬度信息表
+# 输入来源：data/processed/city_coordinates.csv
+read_city_coordinates <- function(path) {
+  if (!file.exists(path)) {
+    return(data.frame())
+  }
+
+  out <- utils::read.csv(path, stringsAsFactors = FALSE, fileEncoding = "UTF-8", check.names = FALSE)
+  if ("city" %in% names(out) && !"city_key" %in% names(out)) {
+    out$city_key <- normalize_city_key(out$city)
+  }
+  if ("longitude" %in% names(out)) out$longitude <- chart_safe_number(out$longitude)
+  if ("latitude" %in% names(out)) out$latitude <- chart_safe_number(out$latitude)
+  out
+}
+
+# 用途：在公司基础表缺少经纬度时，使用城市经纬度信息表按城市匹配补齐
+# 输入来源：standardize_company_fields() 输出和 city_coordinates.csv
+apply_city_coordinates <- function(company_df, city_coordinates, source_file = "data/raw/上市公司基本情况.xlsx") {
+  if (!is.data.frame(company_df) || nrow(company_df) == 0L) return(company_df)
+  if (!"longitude" %in% names(company_df)) company_df$longitude <- NA_real_
+  if (!"latitude" %in% names(company_df)) company_df$latitude <- NA_real_
+  if (!"province" %in% names(company_df)) company_df$province <- NA_character_
+  if (!"city" %in% names(company_df)) return(company_df)
+
+  if (!is.data.frame(city_coordinates) || nrow(city_coordinates) == 0L ||
+      !all(c("city_key", "longitude", "latitude") %in% names(city_coordinates))) {
+    log_data_quality(source_file, "city_coordinates_match", "warning", "城市经纬度信息表不可用，未执行坐标匹配")
+    return(company_df)
+  }
+
+  company_df$city_key <- normalize_city_key(company_df$city)
+  city_coordinates <- city_coordinates[is.finite(city_coordinates$longitude) & is.finite(city_coordinates$latitude), , drop = FALSE]
+  matched_index <- match(company_df$city_key, city_coordinates$city_key)
+  has_match <- !is.na(matched_index)
+  need_lonlat <- !is.finite(company_df$longitude) | !is.finite(company_df$latitude)
+  fill <- has_match & need_lonlat
+
+  company_df$longitude[fill] <- city_coordinates$longitude[matched_index[fill]]
+  company_df$latitude[fill] <- city_coordinates$latitude[matched_index[fill]]
+
+  if ("province" %in% names(city_coordinates)) {
+    need_province <- is.na(company_df$province) | !nzchar(trimws(as.character(company_df$province)))
+    fill_province <- has_match & need_province
+    company_df$province[fill_province] <- city_coordinates$province[matched_index[fill_province]]
+  }
+
+  company_df$city_key <- NULL
+  log_data_quality(source_file, "city_coordinates_match", "ok", paste0("按城市匹配补齐坐标 ", sum(fill, na.rm = TRUE), " 行"))
+  company_df
+}
+
 # 用途：将市场板块成交统计原始字段标准化为统一字段结构
 # 输入来源：data/raw/市场板块成交统计.xlsx
 standardize_board_trading <- function(df) {
@@ -726,6 +849,17 @@ write_processed_market_position <- function(output_dir = "data/processed",
 
   company_std <- standardize_company_fields(company_raw)
   attr(company_std, "source_file") <- company_path
+  city_coord_path <- file.path(output_dir, "city_coordinates.csv")
+  city_coordinates <- build_city_coordinates(company_std, company_path)
+  if (nrow(city_coordinates) > 0L) {
+    write_csv_utf8(city_coordinates, city_coord_path)
+  } else if (file.exists(city_coord_path)) {
+    city_coordinates <- read_city_coordinates(city_coord_path)
+    log_data_quality(company_path, "city_coordinates_reuse", "ok", "本批次未提供经纬度，已复用既有城市经纬度信息表")
+  } else {
+    log_data_quality(company_path, "city_coordinates_reuse", "warning", "本批次未提供经纬度，且未找到既有城市经纬度信息表")
+  }
+  company_std <- apply_city_coordinates(company_std, city_coordinates, company_path)
   board_trading_std <- standardize_board_trading(board_trading_raw)
   attr(board_trading_std, "source_file") <- board_trading_path
 
@@ -741,7 +875,7 @@ write_processed_market_position <- function(output_dir = "data/processed",
   write_csv_utf8(detail, detail_path)
   write_csv_utf8(log, log_path)
 
-  expected <- c(kpi_path, detail_path, log_path)
+  expected <- c(kpi_path, detail_path, city_coord_path, log_path)
   for (path in expected) {
     log_data_quality(
       output_dir,
@@ -755,6 +889,7 @@ write_processed_market_position <- function(output_dir = "data/processed",
   invisible(list(
     kpi = kpi,
     company_detail = detail,
+    city_coordinates = city_coordinates,
     quality_log = get_data_quality_log(),
     files = expected
   ))

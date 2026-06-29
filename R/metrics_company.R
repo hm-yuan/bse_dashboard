@@ -218,35 +218,23 @@ calc_company_geography <- function(data, board_filter = NULL) {
   input <- input[!is.na(input$city) & nzchar(input$city) & !grepl("^=", input$city), , drop = FALSE]
   if (nrow(input) == 0L) return(empty)
 
-  # 若 dim_company 缺少经纬度，尝试从原始 Excel 读取并合并
+  # 若 dim_company 缺少经纬度，使用 processed 城市经纬度信息表按城市匹配
   has_lonlat <- all(c("longitude", "latitude") %in% names(input)) &&
     any(is.finite(input$longitude) & is.finite(input$latitude))
   if (!has_lonlat) {
     input$longitude <- NULL
     input$latitude <- NULL
-    excel_coords <- tryCatch({
-      path <- "data/raw/上市公司基本情况.xlsx"
-      if (file.exists(path) && requireNamespace("readxl", quietly = TRUE)) {
-        raw <- as.data.frame(readxl::read_excel(path, sheet = "公司", .name_repair = "unique"), stringsAsFactors = FALSE)
-        code_col <- if ("代码" %in% names(raw)) "代码" else if ("company_code" %in% names(raw)) "company_code" else NA_character_
-        board_col_raw <- intersect(c("上市板块", "板块", "board", "market"), names(raw))[[1]]
-        lon_col <- intersect(c("经度", "longitude", "Longitude", "lon", "LON"), names(raw))[[1]]
-        lat_col <- intersect(c("纬度", "latitude", "Latitude", "lat", "LAT"), names(raw))[[1]]
-        if (!is.na(code_col) && !is.na(lon_col) && !is.na(lat_col)) {
-          coords <- raw[, c(code_col, board_col_raw, lon_col, lat_col), drop = FALSE]
-          names(coords) <- c("company_code", "board", "longitude", "latitude")
-          if (!is.null(board_filter) && !is.na(board_col_raw)) {
-            coords <- coords[trimws(as.character(coords$board)) %in% board_filter, , drop = FALSE]
-          }
-          coords$longitude <- chart_safe_number(coords$longitude)
-          coords$latitude <- chart_safe_number(coords$latitude)
-          coords <- coords[is.finite(coords$longitude) & is.finite(coords$latitude), c("company_code", "longitude", "latitude"), drop = FALSE]
-          if (nrow(coords) > 0L) coords else NULL
-        } else NULL
-      } else NULL
-    }, error = function(e) NULL)
-    if (!is.null(excel_coords)) {
-      input <- merge(input, excel_coords, by = "company_code", all.x = TRUE)
+    city_coords <- metric_table(data, "city_coordinates")
+    if (metric_has_cols(city_coords, c("city", "longitude", "latitude"))) {
+      city_coords$city_key <- if ("city_key" %in% names(city_coords)) city_coords$city_key else city_key(city_coords$city)
+      city_coords$longitude <- chart_safe_number(city_coords$longitude)
+      city_coords$latitude <- chart_safe_number(city_coords$latitude)
+      city_coords <- city_coords[is.finite(city_coords$longitude) & is.finite(city_coords$latitude), , drop = FALSE]
+      input$city_key_tmp <- city_key(input$city)
+      coords <- city_coords[, intersect(c("city_key", "longitude", "latitude"), names(city_coords)), drop = FALSE]
+      names(coords)[names(coords) == "city_key"] <- "city_key_tmp"
+      input <- merge(input, coords, by = "city_key_tmp", all.x = TRUE)
+      input$city_key_tmp <- NULL
     }
   }
 

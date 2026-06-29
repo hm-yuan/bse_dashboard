@@ -12,40 +12,69 @@ company_profile_chart_block <- function(type) {
 company_geo_map_combined_card_ui <- function(ns, block) {
   div(
     class = "content-card chart-card company-geo-combined-card",
-    card_heading(block$title, block$note),
+    card_heading("上市公司基本情况", "上半区：地理分布与上市公司列表；下半区：经营状态、营收利润与行业市值结构"),
     div(
       class = "chart-content company-geo-combined-content",
       div(
-        class = "company-geo-left",
+        class = "company-profile-row company-profile-row-top",
         div(
-          class = "company-geo-left-top",
-          highcharter::highchartOutput(ns("geo_map"), height = "100%"),
+          class = "company-profile-panel company-profile-map-panel",
+          div(class = "company-profile-panel-heading", "地域分布"),
           div(
-            class = "geo-reset-btn-wrap",
-            shiny::actionButton(
-              ns("geo_reset"),
-              label = "复位",
-              class = "geo-reset-btn"
+            class = "company-profile-panel-body company-profile-map-body",
+            highcharter::highchartOutput(ns("geo_map"), height = "100%"),
+            div(
+              class = "geo-reset-btn-wrap",
+              shiny::actionButton(
+                ns("geo_reset"),
+                label = "复位",
+                class = "geo-reset-btn"
+              )
             )
           )
         ),
         div(
-          class = "company-geo-left-bottom",
+          class = "company-profile-panel company-profile-table-panel",
+          div(class = "company-profile-panel-heading", "上市公司列表"),
           div(
-            class = "geo-bottom-scatter",
-            shiny::uiOutput(ns("scatter_plot"))
-          ),
-          div(
-            class = "geo-bottom-scatter",
-            highcharter::highchartOutput(ns("operating_status_donut"), height = "100%")
+            class = "company-profile-panel-body company-profile-table-body",
+            div(class = "geo-table-scroll geo-reactable-wrap", reactable::reactableOutput(ns("finance_table")))
           )
         )
       ),
       div(
-        class = "company-geo-right",
+        class = "company-profile-row company-profile-row-bottom",
         div(
-          class = "company-geo-right-cell geo-geo-table-cell",
-          div(class = "geo-table-scroll geo-reactable-wrap", reactable::reactableOutput(ns("finance_table")))
+          class = "company-profile-panel company-profile-operating-panel",
+          div(class = "company-profile-panel-heading", "经营状态与营收利润"),
+          div(
+            class = "company-profile-mini-grid",
+            div(
+              class = "geo-bottom-scatter",
+              highcharter::highchartOutput(ns("operating_status_donut"), height = "100%")
+            ),
+            div(
+              class = "geo-bottom-scatter",
+              shiny::uiOutput(ns("scatter_plot"))
+            )
+          )
+        ),
+        div(
+          class = "company-profile-panel company-profile-treemap-panel",
+          div(class = "company-profile-panel-heading", "本所上市公司行业市值结构"),
+          div(
+            class = "treemap-toolbar company-profile-treemap-toolbar",
+            tags$span(class = "treemap-state", textOutput(ns("treemap_state"), inline = TRUE)),
+            div(
+              class = "treemap-actions",
+              shiny::actionButton(ns("treemap_back"), "返回行业", class = "treemap-action treemap-action-secondary"),
+              shiny::actionButton(ns("treemap_unit"), "切换为公司市值", class = "treemap-action")
+            )
+          ),
+          div(
+            class = "company-profile-panel-body company-profile-treemap-body",
+            highcharter::highchartOutput(ns("industry_treemap"), height = "100%")
+          )
         )
       )
     )
@@ -67,11 +96,6 @@ companyProfileUI <- function(id) {
     dashboard_grid(
       class = "chart-grid company-profile-main-grid",
       geo_map_combined
-    ),
-    dashboard_grid(
-      class = "bottom-grid-two-col",
-      market_industry_distribution_card(ns),
-      market_industry_treemap_card(ns)
     )
   )
 }
@@ -106,24 +130,22 @@ companyProfileServer <- function(id) {
 
     output$treemap_state <- shiny::renderText({
       selected <- selected_industry()
-      level <- if (is.null(selected)) "行业分布" else paste0("公司明细：", if (identical(selected, "__other__")) "其他行业" else selected)
       unit <- if (identical(size_by(), "count")) "按公司家数" else "按公司市值"
-      paste(level, "·", unit)
+      scope <- treemap_scope_label()
+      if (is.null(selected)) {
+        paste0(scope, " · 行业分布：", unit)
+      } else {
+        selected_label <- if (identical(selected, "__other__")) "其他行业" else selected
+        paste0(scope, " · 公司明细：", selected_label, " · ", unit)
+      }
     })
 
     output$industry_treemap <- highcharter::renderHighchart({
       plot_market_industry_treemap_drill(
-        data = dashboard_data,
+        data = filtered_treemap_data(),
         selected_industry = selected_industry(),
         size_by = size_by(),
         click_input_id = session$ns("industry_treemap_click")
-      )
-    })
-
-    output$industry_distribution_chart <- highcharter::renderHighchart({
-      plot_market_industry_distribution(
-        calc_market_industry_distribution(input$market_select, input$industry_metric),
-        metric = input$industry_metric
       )
     })
 
@@ -145,6 +167,10 @@ companyProfileServer <- function(id) {
       geo_filter(NULL)
     })
 
+    shiny::observeEvent(geo_filter(), {
+      selected_industry(NULL)
+    }, ignoreInit = TRUE)
+
     # 地图可能返回英文省份名称（GeoJSON 属性）或简写中文名称（joinBy 后的数据）。
     # 先统一转换为简写中文，后续再通过 normalize_province_name 与 Excel 中的完整名称匹配。
     province_name_map <- c(
@@ -157,6 +183,54 @@ companyProfileServer <- function(id) {
       "Shanxi" = "山西", "Sichuan" = "四川", "Taiwan" = "台湾", "Tianjin" = "天津",
       "Xinjiang" = "新疆", "Xizang" = "西藏", "Yunnan" = "云南", "Zhejiang" = "浙江"
     )
+
+    treemap_scope_label <- shiny::reactive({
+      filt <- geo_filter()
+      if (is.null(filt)) return("全部地区")
+      if (!is.null(filt$city) && nzchar(filt$city)) return(filt$city)
+      province <- filt$province
+      if (!is.null(province) && province %in% names(province_name_map)) {
+        province <- province_name_map[[province]]
+      }
+      province <- normalize_province_name(province)
+      if (!is.null(province) && nzchar(province)) province else "全部地区"
+    })
+
+    filtered_treemap_data <- shiny::reactive({
+      filt <- geo_filter()
+      if (is.null(filt)) return(dashboard_data)
+
+      detail <- metric_table(dashboard_data, "market_position_company_detail")
+      dim_company <- metric_table(dashboard_data, "dim_company")
+      if (!metric_has_cols(detail, c("company_code", "industry", "total_market_cap_yi", "pe")) ||
+          !metric_has_cols(dim_company, c("company_code", "city"))) {
+        return(dashboard_data)
+      }
+
+      city_key <- function(x) gsub("市$", "", trimws(as.character(x)))
+      lookup <- dim_company[, intersect(c("company_code", "province", "city"), names(dim_company)), drop = FALSE]
+      lookup$city_key <- city_key(lookup$city)
+      if ("province" %in% names(lookup)) {
+        lookup$province_key <- normalize_province_name(lookup$province)
+      } else {
+        lookup$province_key <- NA_character_
+      }
+
+      if (!is.null(filt$city) && nzchar(filt$city)) {
+        codes <- lookup$company_code[lookup$city_key == city_key(filt$city)]
+      } else {
+        province_filter <- filt$province
+        if (!is.null(province_filter) && province_filter %in% names(province_name_map)) {
+          province_filter <- province_name_map[[province_filter]]
+        }
+        province_filter <- normalize_province_name(province_filter)
+        codes <- lookup$company_code[lookup$province_key == province_filter]
+      }
+
+      out <- dashboard_data
+      out$market_position_company_detail <- detail[detail$company_code %in% codes, , drop = FALSE]
+      out
+    })
 
     filtered_finance_data <- shiny::reactive({
       filt <- geo_filter()

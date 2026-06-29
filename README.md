@@ -87,13 +87,13 @@ shiny::runApp()
 
 已实现的重点图表和交互：
 
-* 多市场规模气泡图
-* 板块成交规模与趋势组合图
-* 市场规模与市值分布组合图
-* 北交所历年上市公司数量与企业所有权性质组合图
-* 市值与市盈率散点图
-* 行业分布和行业矩形树图
-* 板块成交指标切换
+* 北交所上市公司数量与交易成长组合图
+* 交易成长图支持日度/月度/年度和成交额/换手率/成交占比切换
+* 估值、股权性质与市值分布右侧组合卡
+* 全球主要资本市场对比三标签卡片
+* 全球市场指标、中国市场和成长板块筛选
+* 各市场行业分布、专精特新数量和研发强度占比
+* 行业矩形树图、市场规模气泡图等基础能力保留
 
 ### 公司画像
 
@@ -218,6 +218,7 @@ process_basic_data()
 
 * `data/processed/market_position_kpi.csv`
 * `data/processed/market_position_company_detail.csv`
+* `data/processed/city_coordinates.csv`
 * `data/processed/data_quality_log.csv`
 
 ## 当前数据读取机制
@@ -225,9 +226,10 @@ process_basic_data()
 应用启动时：
 
 1. `global.R` source 全部 R 文件。
-2. `load_dashboard_data()` 读取 `data/processed/` 标准表和辅助表。
-3. `build_dashboard_page_models()` 根据 `BSE_PRESENTATION_MODE` 构建 `semantic` 或 `placeholder` 页面模型。
-4. 各页面 module 使用 `dashboard_data` 和 `dashboard_page_models` 渲染。
+2. 如果 `data/raw/上市公司基本情况.xlsx` 比 `data/processed/market_position_kpi.csv` 更新，`global.R` 会尝试自动运行 `process_basic_data()`。
+3. `load_dashboard_data()` 读取 `data/processed/` 标准表和辅助表。
+4. `build_dashboard_page_models()` 根据 `BSE_PRESENTATION_MODE` 构建 `semantic` 或 `placeholder` 页面模型。
+5. 各页面 module 使用 `dashboard_data` 和 `dashboard_page_models` 渲染。
 
 如果关键 processed 文件缺失或读取失败，应用会尽量回退到演示数据，保证 Shiny 可以启动。
 
@@ -256,4 +258,4 @@ UI 修改前请先阅读 `UI_STYLE_GUIDE.MD`，该文件是当前唯一视觉规
 * 通用组件写入 `R/ui_components.R`。
 * 通用样式写入 `www/custom.css`。
 * 数据处理任务必须同步更新 `docs/DATA_PROCESSING.md`。
-* 当前公司画像中直接读取 raw Excel 的逻辑属于过渡实现，后续应迁移到 processed 标准表。
+* 当前市场定位和公司画像中仍有部分图表/联动直接只读 raw Excel，属于过渡实现，后续应迁移到 processed 标准表。

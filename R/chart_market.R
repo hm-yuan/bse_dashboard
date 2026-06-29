@@ -954,8 +954,8 @@ plot_market_industry_treemap_drill <- function(data,
       highcharter::hc_legend(enabled = FALSE)
 }
 
-# 用途：绘制各市场板块年度成交趋势分组柱状图，数据来自市场板块成交统计。
-#       横轴为年份，每年份内按板块分组；指标切换由卡片右上角下拉菜单控制。
+# 用途：绘制各市场板块年度成交趋势横向条形图，数据来自市场板块成交统计。
+#       纵轴按年份分组，板块作为系列；指标切换由卡片右上角下拉菜单控制。
 # 输入来源：`calc_board_trading_data()` 读取的 raw Excel 数据。
 plot_board_trading <- function(metric = c("turnover_amount_yi", "avg_daily_turnover_yi")) {
   metric <- match.arg(metric)
@@ -982,36 +982,53 @@ plot_board_trading <- function(metric = c("turnover_amount_yi", "avg_daily_turno
   complete_grid$board <- factor(complete_grid$board, levels = board_order)
   merged <- merge(complete_grid, df, by = c("year", "board"), all.x = TRUE)
   merged[[metric]][is.na(merged[[metric]])] <- 0
+  merged$board <- factor(merged$board, levels = board_order)
+  merged <- merged[order(merged$year, merged$board), , drop = FALSE]
 
-  hc <- chart_hc_base("column") |>
-    hc_x_axis("年份", categories = years) |>
-    hc_y_axis(y_axis_title) |>
+  hc <- chart_hc_base(NULL) |>
+    highcharter::hc_chart(type = "bar", backgroundColor = "transparent", spacing = c(4, 10, 4, 0)) |>
+    highcharter::hc_xAxis(
+      categories = years,
+      title = list(text = NULL),
+      labels = list(style = list(fontSize = "11px", color = "#60758D", fontWeight = "650"))
+    ) |>
+    hc_y_axis(y_axis_title, min = 0) |>
     highcharter::hc_plotOptions(
-      column = list(
+      bar = list(
         borderWidth = 0,
-        pointPadding = 0.02,
-        groupPadding = 0.12
+        pointPadding = 0.04,
+        groupPadding = 0.12,
+        dataLabels = list(
+          enabled = TRUE,
+          crop = FALSE,
+          overflow = "allow",
+          format = "{point.y:,.0f}",
+          style = list(color = "#0F172A", fontSize = "9px", fontWeight = "700", textOutline = "none")
+        )
       )
     ) |>
     highcharter::hc_tooltip(
       shared = TRUE,
       headerFormat = "<b>{point.key} 年</b><br/>",
-      pointFormat = "<span style=\"color:{point.color}\">●</span> {series.name}: <b>{point.y:,.1f}</b> 亿元<br/>"
+      pointFormat = paste0("<span style=\"color:{point.color}\">●</span> {series.name}：<b>{point.y:,.1f}</b> 亿元<br/>")
     ) |>
     highcharter::hc_legend(
       enabled = TRUE,
       layout = "horizontal",
       align = "center",
-      verticalAlign = "bottom"
+      verticalAlign = "bottom",
+      itemStyle = list(fontSize = "10px", fontWeight = "600")
     )
 
   for (b in board_order) {
+    sub <- merged[merged$board == b, , drop = FALSE]
+    sub <- sub[match(years, sub$year), , drop = FALSE]
     hc <- hc |>
       highcharter::hc_add_series(
         name = b,
-        type = "column",
+        type = "bar",
         color = board_palette[[b]],
-        data = chart_safe_number(merged[[metric]][merged$board == b])
+        data = chart_safe_number(sub[[metric]])
       )
   }
 
@@ -1329,6 +1346,175 @@ plot_global_capital_market_bar <- function(metric = "total_market_cap_yi", china
       pointFormat = paste0("<b>{point.name}</b><br/>", metric_labels[[metric]], "：<b>{point.y:,.", decimals[[metric]], "f}</b>", suffixes[[metric]])
     ) |>
     highcharter::hc_legend(enabled = FALSE) |>
+    highcharter::hc_add_series(
+      type = "bar",
+      name = metric_labels[[metric]],
+      data = data
+    )
+}
+
+# 用途：读取全球资本市场 IPO 融资规模基础表。
+# 输入来源：data/raw/global_capital_market_ipo_financing_2026h1.csv。
+calc_global_ipo_financing_data <- function(path = "data/raw/global_capital_market_ipo_financing_2026h1.csv") {
+  if (!file.exists(path)) {
+    return(data.frame())
+  }
+
+  dat <- tryCatch(
+    utils::read.csv(path, stringsAsFactors = FALSE, fileEncoding = "UTF-8", check.names = FALSE),
+    error = function(e) NULL
+  )
+  if (is.null(dat) || nrow(dat) == 0L) {
+    return(data.frame())
+  }
+
+  required <- c("rank", "exchange", "financing_amount_usd_100m", "financing_yoy_pct", "ipo_count")
+  if (!all(required %in% names(dat))) {
+    return(data.frame())
+  }
+
+  out <- data.frame(
+    rank = as.integer(chart_safe_number(dat$rank)),
+    exchange = trimws(as.character(dat$exchange)),
+    financing_amount_usd_100m = chart_safe_number(dat$financing_amount_usd_100m),
+    financing_yoy_pct = chart_safe_number(dat$financing_yoy_pct),
+    ipo_count = chart_safe_number(dat$ipo_count),
+    period = if ("period" %in% names(dat)) as.character(dat$period) else "2026H1",
+    note = if ("note" %in% names(dat)) as.character(dat$note) else "2026年上半年IPO募资",
+    stringsAsFactors = FALSE
+  )
+  out <- out[!is.na(out$rank) & !is.na(out$exchange) & nzchar(out$exchange), , drop = FALSE]
+  out[order(out$rank), , drop = FALSE]
+}
+
+# 用途：绘制全球资本市场 IPO 融资规模横向 bar 图。
+#       指标由标签页右上角下拉框切换。
+# 输入来源：calc_global_ipo_financing_data() 返回的数据。
+plot_global_ipo_financing_bar <- function(metric = "financing_amount_usd_100m") {
+  metric_choices <- c("financing_amount_usd_100m", "financing_yoy_pct", "ipo_count")
+  metric <- if (metric %in% metric_choices) metric else "financing_amount_usd_100m"
+
+  df <- calc_global_ipo_financing_data()
+  if (!is.data.frame(df) || nrow(df) == 0L) {
+    return(chart_empty_state("暂无全球资本市场融资规模数据"))
+  }
+  if (!chart_has_highcharter()) {
+    return(chart_fallback_table("全球资本市场融资规模", df, "未检测到 highcharter"))
+  }
+
+  highlight_palette <- c(
+    "上海证券交易所" = "#0B2A5B",
+    "深圳证券交易所" = "#4E95D9",
+    "北京证券交易所" = "#00A6C8"
+  )
+  keyboard_gray <- "#F2F2F2"
+  metric_labels <- c(
+    financing_amount_usd_100m = "募资额",
+    financing_yoy_pct = "募资额同比",
+    ipo_count = "IPO 数量"
+  )
+  axis_titles <- c(
+    financing_amount_usd_100m = "亿美元",
+    financing_yoy_pct = "%",
+    ipo_count = "家"
+  )
+  suffixes <- c(
+    financing_amount_usd_100m = " 亿美元",
+    financing_yoy_pct = "%",
+    ipo_count = " 家"
+  )
+  decimals <- c(
+    financing_amount_usd_100m = 0,
+    financing_yoy_pct = 0,
+    ipo_count = 0
+  )
+
+  df <- df[!is.na(df[[metric]]), , drop = FALSE]
+  if (nrow(df) == 0L) {
+    return(chart_empty_state("当前指标暂无数据"))
+  }
+  df <- df[order(chart_safe_number(df[[metric]]), decreasing = TRUE), , drop = FALSE]
+  categories <- df$exchange
+  data <- lapply(seq_len(nrow(df)), function(i) {
+    exchange <- df$exchange[[i]]
+    list(
+      name = exchange,
+      y = chart_safe_number(df[[metric]][[i]]),
+      color = if (exchange %in% names(highlight_palette)) highlight_palette[[exchange]] else keyboard_gray,
+      rank = df$rank[[i]],
+      amount = chart_safe_number(df$financing_amount_usd_100m[[i]]),
+      yoy = chart_safe_number(df$financing_yoy_pct[[i]]),
+      count = chart_safe_number(df$ipo_count[[i]])
+    )
+  })
+
+  axis_min <- if (identical(metric, "financing_yoy_pct")) min(-20, min(df[[metric]], na.rm = TRUE) * 1.1) else 0
+  axis_max <- max(df[[metric]], na.rm = TRUE) * 1.16
+  tooltip_extra <- character()
+  if (!identical(metric, "financing_amount_usd_100m")) {
+    tooltip_extra <- c(tooltip_extra, "募资额：<b>{point.amount:,.0f}</b> 亿美元")
+  }
+  if (!identical(metric, "financing_yoy_pct")) {
+    tooltip_extra <- c(tooltip_extra, "同比：<b>{point.yoy:,.0f}</b>%")
+  }
+  if (!identical(metric, "ipo_count")) {
+    tooltip_extra <- c(tooltip_extra, "IPO 数量：<b>{point.count:,.0f}</b> 家")
+  }
+
+  chart_hc_base(NULL) |>
+    highcharter::hc_chart(
+      type = "bar",
+      backgroundColor = "transparent",
+      spacing = c(6, 18, 18, 6)
+    ) |>
+    highcharter::hc_xAxis(
+      categories = categories,
+      title = list(text = NULL),
+      labels = list(
+        style = list(color = "#2F3A45", fontSize = "11px", fontWeight = "650"),
+        formatter = highcharter::JS(
+          "function(){return '<span style=\"color:#C59B45;font-weight:800;margin-right:6px;\">'+(this.pos+1)+'</span> '+this.value;}"
+        ),
+        useHTML = TRUE
+      )
+    ) |>
+    hc_y_axis(
+      axis_titles[[metric]],
+      min = axis_min,
+      max = axis_max,
+      plot_lines = if (identical(metric, "financing_yoy_pct")) list(list(value = 0, width = 1, color = "#AEB8C2")) else NULL
+    ) |>
+    highcharter::hc_plotOptions(
+      bar = list(
+        borderWidth = 0,
+        pointPadding = 0.08,
+        groupPadding = 0.04,
+        dataLabels = list(
+          enabled = TRUE,
+          crop = FALSE,
+          overflow = "allow",
+          inside = FALSE,
+          format = paste0("{point.y:,.", decimals[[metric]], "f}", if (identical(metric, "financing_yoy_pct")) "%" else ""),
+          style = list(color = "#0F172A", fontSize = "11px", fontWeight = "700", textOutline = "none")
+        )
+      )
+    ) |>
+    highcharter::hc_tooltip(
+      useHTML = TRUE,
+      headerFormat = "",
+      pointFormat = paste0(
+        "<b>{point.name}</b><br/>",
+        metric_labels[[metric]], "：<b>{point.y:,.", decimals[[metric]], "f}</b>",
+        suffixes[[metric]], "<br/>",
+        paste(tooltip_extra, collapse = "<br/>")
+      )
+    ) |>
+    highcharter::hc_legend(enabled = FALSE) |>
+    highcharter::hc_caption(
+      text = "2026年上半年IPO募资",
+      align = "right",
+      style = list(color = "#64748B", fontSize = "11px", fontWeight = "600")
+    ) |>
     highcharter::hc_add_series(
       type = "bar",
       name = metric_labels[[metric]],

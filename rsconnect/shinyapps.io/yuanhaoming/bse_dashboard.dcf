@@ -5,7 +5,7 @@ account: yuanhaoming
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 17541179
-bundleId: 12184097
+bundleId: 12194441
 url: https://yuanhaoming.shinyapps.io/bse_dashboard/
 version: 1
 asMultiple: FALSE

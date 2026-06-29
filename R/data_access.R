@@ -268,7 +268,8 @@ load_dashboard_data <- function(use_processed = TRUE,
     "fact_fundraising_use",
     "fact_supervision",
     "fact_risk_tag",
-    "fact_listing_pipeline"
+    "fact_listing_pipeline",
+    "city_coordinates"
   )
 
   standard <- stats::setNames(vector("list", length(standard_tables)), standard_tables)
